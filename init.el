@@ -47,7 +47,7 @@
 (require 'recentf)
 (recentf-mode 1)
 (setq recentf-max-saved-items 100) ;; Adjust the number of recent files to keep
-(add-hook 'emacs-startup-hook 'recentf-open-files)
+;; (add-hook 'emacs-startup-hook 'recentf-open-files)
 
 ;; don't write lock files
 (setq create-lockfiles nil)
@@ -56,6 +56,9 @@
 (setq tags-case-fold-search nil)
 
 ;; Don't litter project
+;; create if doesn't exist
+(unless (file-directory-p "~/.emacs.d/autosaves")
+  (make-directory "~/.emacs.d/autosaves"))
 (setq auto-save-file-name-transforms
       `((".*" "~/.emacs.d/autosaves/" t)))
 (setq backup-directory-alist
@@ -84,11 +87,12 @@
                                   nyan-mode
                                   undo-fu
                                   flycheck
+                                  ripgrep
                                   vertico
                                   rg
                                   copilot
                                   dash
-				  exec-path-from-shell
+                                  exec-path-from-shell
                                   s
                                   editorconfig
                                   f
@@ -173,9 +177,10 @@
 ;; my stuff
 ;; my vars
 (setq my-project-root (expand-file-name "."))
+(setq my-project-prist my-project-root)
 (setq my-ctags-languages "")
 (setq my-ctags-kinds "")
-(setq my-ctags-excludes "--exclude=*.min.js --exclude=3p")
+(setq my-ctags-excludes "")
 
 ;; completers
 (defun my-completer (list-of-strings sink-fn)
@@ -312,7 +317,7 @@
     (hl-line-mode)          ;; Highlight the current line
     ;; Prompt the user for the left directory and use it as the default for the right directory
     (let* ((left-dir (expand-file-name (directory-file-name
-                                        (read-directory-name "left: " my-project-root))))
+                                        (read-directory-name "left: " my-project-prist))))
            (right-dir (expand-file-name (directory-file-name
                                          (read-directory-name "right: " left-dir))))
            (cmd (concat
@@ -357,9 +362,15 @@
   "v" 'evil-window-vsplit						;; split window right
   "r" 'my-project-replace-under-cursor				        ;; replace under cursor
   "e" 'my-complete-find-file                                            ;; find files
-  "pe" 'my-complete-find-file                                            ;; find files
+  "pe" 'my-complete-find-file-force                                     ;; find files force
   "b" 'my-complete-buffer-tags                                          ;; complete buffer tags
   "<tab>" 'tab-close
+  "H" (lambda () (interactive)
+	(if (vc-registered (buffer-file-name))
+	    (progn
+	      (tab-new)
+	      (call-interactively 'vc-ediff))
+	  (message "File is not under version control")))
   "q" 'evil-quit
   ;; ask user for directory to set as project root, use current project root as default strip the trailing slash and expand the path in case of tilde
   "pp" (lambda () (interactive) (setq my-project-root (expand-file-name (directory-file-name (read-directory-name "Project root: " my-project-root)))))
@@ -367,6 +378,20 @@
 
 (evil-define-key 'normal 'global (kbd "] <tab>") 'tab-next)
 (evil-define-key 'normal 'global (kbd "[ <tab>") 'tab-previous)
+
+;; windows only stuff
+(when (eq system-type 'windows-nt)
+  ;; set font to consolas
+  (set-frame-font "Comic Code-10")
+  (load "~/.emacs.d/my-windows-shell.el")
+  (evil-leader/set-key
+    "zz" 'z-project-init
+    )
+
+  (load "~/.emacs.d/my-zogotech.el")
+  )
+
+;; EMACS CUSTOMIZATION STUFF BELOW
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
