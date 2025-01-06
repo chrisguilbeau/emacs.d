@@ -67,10 +67,10 @@
 ;; python specific stuff
 ;; python
 ;; (setq python-shell-interpreter "c:/ZogoTech/python")
-(add-hook 'python-mode-hook
-          '(lambda ()
-             (define-abbrev python-mode-abbrev-table "pdb" "breakpoint();")))
-(add-hook 'python-mode-hook '(lambda () (abbrev-mode 1)))
+;; (add-hook 'python-mode-hook
+;;           '(lambda ()
+;;              (define-abbrev python-mode-abbrev-table "pdb" "breakpoint();")))
+;; (add-hook 'python-mode-hook '(lambda () (abbrev-mode 1)))
 (add-hook 'python-mode-hook (lambda () (local-set-key (kbd "TAB") 'indent-relative)))
 (add-hook 'python-ts-mode-hook (lambda () (local-set-key (kbd "TAB") 'indent-relative)))
 
@@ -274,6 +274,10 @@
 	 )))
    "project-tags.cache" force-refresh))
 
+(defun my-complete-buffer-tags-force ()
+  (interactive)
+  (my-complete-buffer-tags t))
+
 (defun my-complete-find-file-force ()
   (interactive)
   (my-complete-find-file t))
@@ -354,16 +358,38 @@
 	  ))
     (evil-ex (concat "%s/" (thing-at-point 'word) "/"))))
 
+(defun my-project-split-right ()
+  "Split the current window once to the right, then force all but the
+   right-most windows in the frame to be 85 columns wide."
+  (interactive)
+  (evil-window-vsplit)
+  (let* ((target-width 85)
+         ;; Get all windows in the *selected frame*, skipping minibuffers.
+         ;; Then filter out non-window objects (just in case).
+         (ws (sort (cl-remove-if-not #'windowp
+                                     (window-list (selected-frame) 'no-minibuffer))
+                   (lambda (w1 w2)
+                     (< (window-left-column w1)
+                        (window-left-column w2))))))
+
+    ;; Resize each window except the last one
+    (dolist (w (butlast ws))
+      (with-selected-window w
+        (let ((delta (- target-width (window-total-width w))))
+          (ignore-errors
+            (window-resize w delta t)))))))
+
 ;; keybindings
 ;; set keybindings with default leader
 (evil-leader/set-key
   "i" (lambda () (interactive) (find-file "~/.emacs.d/init.el"))	;; open init file
   "xb" 'eval-buffer							;; run current buffer
-  "v" 'evil-window-vsplit						;; split window right
+  "v" 'my-project-split-right						;; split right
   "r" 'my-project-replace-under-cursor				        ;; replace under cursor
-  "e" 'my-complete-find-file                                            ;; find files
-  "pe" 'my-complete-find-file-force                                     ;; find files force
-  "b" 'my-complete-buffer-tags                                          ;; complete buffer tags
+  "e" 'my-complete-find-file-force                                      ;; find files
+  "pe" 'my-complete-find-file						;; find files force
+  "b" 'my-complete-buffer-tags-force                                    ;; complete buffer tags
+  "pb" 'my-complete-buffer-tags						;; complete buffer tags force
   "<tab>" 'tab-close
   "H" (lambda () (interactive)
 	(if (vc-registered (buffer-file-name))
@@ -378,6 +404,27 @@
 
 (evil-define-key 'normal 'global (kbd "] <tab>") 'tab-next)
 (evil-define-key 'normal 'global (kbd "[ <tab>") 'tab-previous)
+
+;; Mac only stuff
+(when (eq system-type 'darwin)
+  (set-frame-font "Comic Code-13")
+  (defun z-init()
+    (interactive)
+    (setq my-project-root (expand-file-name "~/z/dev"))
+    (defun my-complete-find-file (&optional force-refresh)
+      (interactive "P")
+      (my-completer-cmd (concat "fd . "
+				" --extension py "
+				" --extension js "
+				" --extension css "
+				my-project-root "/(server|webserver|appserver)"
+				) 'find-file "find-file.cache" force-refresh))
+    (message "the z has been initted for macos...")
+    )
+  (evil-leader/set-key
+    "zz" 'z-init
+    )
+  )
 
 ;; windows only stuff
 (when (eq system-type 'windows-nt)
