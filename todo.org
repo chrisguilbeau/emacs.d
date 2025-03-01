@@ -1,0 +1,4 @@
+* Emacs enhancements
+- [ ] delete trailing whitespace
+- [ ] draw line at 80 chars
+- [ ] remember where I am in the file

@@ -15,6 +15,23 @@
 (setq-default fill-column 80)
 (tool-bar-mode -1)                                              ;; remove toolbar
 
+;; treesitter stuff
+;; (treesit-install-language-grammar) ; do this to install a language
+;; remap modes to ts-mode
+(setq major-mode-remap-alist
+      '((python-mode . python-ts-mode)))
+;; create a dynamic hook based on if ts is installed
+(setq my-python-hook
+      (if (treesit-available-p) 'python-ts-mode-hook 'python-mode-hook))
+
+;; uniquify
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'post-forward-angle-brackets
+      uniquify-min-dir-content 1
+      uniquify-strip-common-suffix t)
+;; set the format to put the dir name first
+(setq uniquify-buffer-name-style 'forward)
+
 ;; winner mode (allowes to restore window configuration)
 (winner-mode 1)
 
@@ -65,14 +82,27 @@
       `(("." . "~/.emacs.d/backups/")))
 
 ;; python specific stuff
-;; python
-;; (setq python-shell-interpreter "c:/ZogoTech/python")
-;; (add-hook 'python-mode-hook
-;;           '(lambda ()
-;;              (define-abbrev python-mode-abbrev-table "pdb" "breakpoint();")))
-;; (add-hook 'python-mode-hook '(lambda () (abbrev-mode 1)))
-(add-hook 'python-mode-hook (lambda () (local-set-key (kbd "TAB") 'indent-relative)))
+(add-hook my-python-hook (lambda () (local-set-key (kbd "TAB") 'indent-relative)))
 (add-hook 'python-ts-mode-hook (lambda () (local-set-key (kbd "TAB") 'indent-relative)))
+(add-hook my-python-hook
+	  (lambda ()
+	    ;; set some evil leader bindings
+	    (evil-leader/set-key
+	      ";" (lambda ()
+		    (interactive)
+		    ;; Grab the indentation from the current line
+		    (let ((indentation (save-excursion
+					 (back-to-indentation)
+					 (buffer-substring-no-properties (line-beginning-position)
+									 (point)))))
+		      ;; Move to start of current line
+		      (beginning-of-line)
+		      ;; Open a blank line above
+		      (open-line 1)
+		      ;; Insert indentation and `breakpoint();`
+		      (insert indentation "breakpoint();")
+		    )))))
+
 
 
 ;; packages
@@ -85,12 +115,12 @@
                                   evil-commentary
                                   evil-numbers
                                   nyan-mode
-                                  undo-fu
                                   flycheck
                                   ripgrep
                                   vertico
                                   rg
                                   copilot
+				  copilot-chat
                                   dash
                                   exec-path-from-shell
                                   s
@@ -101,6 +131,24 @@
 (unless package-archive-contents
   (package-refresh-contents))
 (package-install-selected-packages)
+
+;; tab-bar-mode
+;; customize the colors
+(set-face-attribute 'tab-bar nil :background "white")
+(set-face-attribute 'tab-bar nil :foreground "black")
+(set-face-attribute 'tab-bar-tab nil :background "grey90")
+(set-face-attribute 'tab-bar-tab nil :foreground "black")
+(set-face-attribute 'tab-bar-tab-inactive nil :background "grey80")
+(set-face-attribute 'tab-bar-tab-inactive nil :foreground "grey40")
+(set-face-attribute 'tab-bar-tab-inactive nil :underline nil)
+(set-face-attribute 'tab-bar-tab-inactive nil :box nil)
+(set-face-attribute 'tab-bar-tab nil :box nil)
+(set-face-attribute 'tab-bar-tab nil :underline nil)
+(set-face-attribute 'tab-bar-tab nil :box nil)
+;; set the font to be the same
+(set-face-attribute 'tab-bar nil :font "Comic Code-10")
+(tab-bar-mode 1)
+(setq tab-bar-show 1)
 
 ;; mac os shell mode
 (when (memq window-system '(mac ns x))
@@ -113,6 +161,7 @@
 ;; evil
 (require 'evil)
 (evil-mode 1)
+(evil-set-undo-system 'undo-redo)
 
 ;; evil-leader
 (require 'evil-leader)
@@ -125,17 +174,16 @@
 ;; flycheck
 (require 'flycheck)
 (add-hook 'js-mode-hook #'flycheck-mode)
-(add-hook 'python-mode-hook #'flycheck-mode)
-(add-hook 'python-ts-mode-hook #'flycheck-mode)
-;; (setq-default flycheck-python-flake8-executable "h:/src/python/python.exe")
+(add-hook my-python-hook #'flycheck-mode)
+(with-eval-after-load 'flycheck
+  (setq-default flycheck-disabled-checkers '(python-pyright python-pylint python-mypy python-pycompile))
+  (setq-default flycheck-python-flake8-executable "h:/src/python/python.exe"))
 (setq flycheck-checker-error-threshold nil)
-(setq flycheck-disabled-checkers
-      '(python-mypy python-pylint python-pycompile python-pyright))
 (setq flycheck-flake8rc ".flake8")
 (setq flycheck-highlighting-mode 'lines)
 ;; (setq flycheck-javascript-jshint-executable
 ;;       "C:\\Users\\cg\\scoop\\apps\\nodejs\\current\\bin\\jshint")
-;; (setq flycheck-jshintrc "~/cg.dotfiles/jshint.config")
+(setq flycheck-jshintrc "C:/ZogoTech/hg/cg.dotfiles/jshint.config")
 (setq flycheck-locate-config-file-functions '(flycheck-locate-config-file-ancestor-directories))
 ;; only check on save
 (setq flycheck-check-syntax-automatically '(save mode-enabled))
@@ -159,6 +207,7 @@
 		  (delete-windows-on error-list-buffer))))))
 
 ;; copilot
+(add-to-list 'load-path "~/.emacs.d/copilot.el")
 (require 'copilot)
 (add-hook 'prog-mode-hook 'copilot-mode) ;; enable copilot in all programming modes
 (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
@@ -213,9 +262,11 @@
   (interactive "P")
   (my-completer-cmd (concat "rg --files " (expand-file-name "~/.emacs.d")) 'find-file "find-init.cache" force-refresh))
 
+(setq my-complete-find-file-command "rg --files --path-separator / ")
+
 (defun my-complete-find-file (&optional force-refresh)
   (interactive "P")
-  (my-completer-cmd (concat "rg --files --path-separator / " "\"" my-project-root "\"") 'find-file "find-file.cache" force-refresh))
+  (my-completer-cmd (concat my-complete-find-file-command "\"" my-project-root "\"") 'find-file "find-file.cache" force-refresh))
 
 (defun my-complete-buffer-tags (&optional force-refresh)
   "Complete buffer tags."
@@ -274,6 +325,10 @@
 	 )))
    "project-tags.cache" force-refresh))
 
+(defun my-complete-project-tags-force()
+  (interactive)
+    (my-complete-project-tags t))
+
 (defun my-complete-buffer-tags-force ()
   (interactive)
   (my-complete-buffer-tags t))
@@ -301,6 +356,8 @@
             map)
   )
 
+(setq my-diff-command "diff -qr ")
+
 (defun my-code-review ()
   "Compare source to pristine copy."
   (interactive) ;; Allows the function to be called interactively
@@ -310,8 +367,8 @@
   ;; Create a new buffer named "code-review"
   (let (($buf (generate-new-buffer "code-review")))
     ;; Ensure tab-bar-mode is enabled
-    (when (not (bound-and-true-p tab-bar-mode))
-      (tab-bar-mode 1))
+    ;; (when (not (bound-and-true-p tab-bar-mode))
+    ;;   (tab-bar-mode 1))
     ;; Create a new tab and switch to it
     (tab-new)
     (switch-to-buffer $buf)
@@ -323,10 +380,10 @@
     (let* ((left-dir (expand-file-name (directory-file-name
                                         (read-directory-name "left: " my-project-prist))))
            (right-dir (expand-file-name (directory-file-name
-                                         (read-directory-name "right: " left-dir))))
+                                         (read-directory-name "right: " my-project-root))))
            (cmd (concat
                  "cd / && "
-                 "diff -qr "
+                 my-diff-command
                  (shell-quote-argument left-dir)
                  " "
                  (shell-quote-argument right-dir))))
@@ -379,11 +436,70 @@
           (ignore-errors
             (window-resize w delta t)))))))
 
+(defun get-my-ctags-command()
+  (concat "ctags -Ref " my-project-root "/etags " my-project-root))
+
+(defun my-xref-find-definitions-with-completion (identifier)
+  "Find definitions of IDENTIFIER using completing-read for selection."
+  (interactive (list (xref--read-identifier "Find definitions of: ")))
+  (let* ((fetcher (xref--fetcher-for-identifier identifier))
+         (xrefs (funcall fetcher))
+         (xrefs-alist nil))
+    (if (not xrefs)
+        (message "No definitions found for: %s" identifier)
+      (xref--with-collection xrefs
+        (let ((candidates nil))
+          ;; Build list of candidates with nice display format
+          (xref--collection-table
+           (lambda (xref)
+             (let* ((loc (xref-location xref))
+                    (file (or (xref-location-group loc) ""))
+                    (line (xref-location-line loc))
+                    (column (xref-location-column loc))
+                    (summary (xref-match-summary xref))
+                    (display (format "%s:%s:%s: %s"
+                                     (file-name-nondirectory file)
+                                     (or line "")
+                                     (or column "")
+                                     (or summary ""))))
+               (push (cons display xref) candidates))))
+          (if (= (length candidates) 1)
+              ;; If only one candidate, just go there
+              (xref-pop-to-location (cdar candidates) nil)
+            ;; Otherwise use completing-read
+            (let* ((selection (completing-read "Choose definition: "
+                                              (mapcar #'car candidates) nil t))
+                   (selected-xref (cdr (assoc selection candidates))))
+              (xref-pop-to-location selected-xref nil))))))))
+
 ;; keybindings
 ;; set keybindings with default leader
 (evil-leader/set-key
   "i" (lambda () (interactive) (find-file "~/.emacs.d/init.el"))	;; open init file
   "xb" 'eval-buffer							;; run current buffer
+  "xt" (lambda () (interactive)
+	 (message (get-my-ctags-command))
+	 (shell-command (get-my-ctags-command))
+	 (visit-tags-table (concat my-project-root "/etags"))
+	 ) ;; update tags
+  "t" (lambda () (interactive) (evil-jump-to-tag t))
+  "T" 'find-tag
+  "g" (lambda () (interactive)
+	(let* ((default-query (or (thing-at-point 'symbol t) ""))
+	       (default-files (if (buffer-file-name)
+				  (let ((ext (file-name-extension (buffer-file-name))))
+				    (if ext (concat "*." ext) "*"))
+				"*.py"))
+	       (default-dir my-project-root)
+	       (query (read-string (format "RG Query (default \"%s\"): " default-query)
+				   nil nil default-query))
+	       (files (read-string (format "Files (default \"%s\"): " default-files)
+				   nil nil default-files))
+	       (dir (read-directory-name (format "Directory (default \"%s\"): " default-dir)
+					 default-dir default-dir t)))
+	  (rg query files dir)))
+  ;; toggle line numbers on and off not relative
+  "n" 'display-line-numbers-mode
   "v" 'my-project-split-right						;; split right
   "r" 'my-project-replace-under-cursor				        ;; replace under cursor
   "e" 'my-complete-find-file-force                                      ;; find files
@@ -391,12 +507,16 @@
   "b" 'my-complete-buffer-tags-force                                    ;; complete buffer tags
   "pb" 'my-complete-buffer-tags						;; complete buffer tags force
   "<tab>" 'tab-close
+  "C-a" 'evil-numbers/inc-at-pt
+  "C-x" 'evil-numbers/dec-at-pt
+  "c" 'copilot-mode
   "H" (lambda () (interactive)
 	(if (vc-registered (buffer-file-name))
 	    (progn
 	      (tab-new)
 	      (call-interactively 'vc-ediff))
 	  (message "File is not under version control")))
+  "o" (lambda () (interactive) (find-file "~/.emacs.d/todo.org"))
   "q" 'evil-quit
   ;; ask user for directory to set as project root, use current project root as default strip the trailing slash and expand the path in case of tilde
   "pp" (lambda () (interactive) (setq my-project-root (expand-file-name (directory-file-name (read-directory-name "Project root: " my-project-root)))))
@@ -404,6 +524,13 @@
 
 (evil-define-key 'normal 'global (kbd "] <tab>") 'tab-next)
 (evil-define-key 'normal 'global (kbd "[ <tab>") 'tab-previous)
+
+;; fake quick-fix
+(evil-define-key 'normal 'global (kbd "]q") 'next-error)
+(evil-define-key 'normal 'global (kbd "[q") 'previous-error)
+(require 'rg)
+(define-key rg-mode-map (kbd "]q") 'next-error)
+(define-key rg-mode-map (kbd "[q") 'previous-error)
 
 ;; Mac only stuff
 (when (eq system-type 'darwin)
@@ -421,21 +548,148 @@
 				) 'find-file "find-file.cache" force-refresh))
     (message "the z has been initted for macos...")
     )
-  (evil-leader/set-key
-    "zz" 'z-init
-    )
   )
 
 ;; windows only stuff
 (when (eq system-type 'windows-nt)
   ;; set font to consolas
   (set-frame-font "Comic Code-10")
-  (load "~/.emacs.d/my-windows-shell.el")
-  (evil-leader/set-key
-    "zz" 'z-project-init
+  (defun get-junction-target (junction-dir)
+    "Return the target directory of a Windows junction at JUNCTION-DIR.
+    This function uses the Windows command `fsutil reparsepoint query` to
+    retrieve the reparse point data. If the directory is a valid junction,
+    the returned target will have the leading \"\\??\\\" prefix removed.
+    If not, an error is signaled."
+    (unless (eq system-type 'windows-nt)
+      (error "This function works only on Windows systems"))
+    (unless (file-directory-p junction-dir)
+      (error "Not a valid directory: %s" junction-dir))
+    (let* ((cmd (format "fsutil reparsepoint query %s" (shell-quote-argument junction-dir)))
+	   (output (shell-command-to-string cmd)))
+      (if (string-match "Substitute Name:\\s-*\\(.*\\)" output)
+	  (let ((target (string-trim (match-string 1 output))))
+	    ;; Remove the Windows internal prefix if present.
+	    (if (string-prefix-p "\\??\\" target)
+		(substring target 4)
+	      target))
+	(error "Directory %s is not a junction or its target could not be determined" junction-dir))))
+  (defun z-init()
+    (interactive)
+    (setq my-dev (get-junction-target "h:/dev"))
+    (visit-tags-table (concat my-dev "/etags"))
+    (setq my-project-root (get-junction-target "h:/dev"))
+    (setq my-project-prist (get-junction-target "h:/prist"))
+    (setq my-complete-find-file-command "rg --files --path-separator / -tpy -tjs -tcss -ttxt ")
+    (setq my-diff-command "diff -qr -x .hg -x *.pyc -x __pycache__ -x zebra -x etags -x nvim-undo -x vim-undo -x tags ")
+    ;; set the window title to the project root
+    (setq frame-title-format my-project-root)
+    (message "the z has been initted for windows...")
     )
+  (defun z-open-regression ()
+    "Open the regression folder, refresh its contents and sort files by time."
+    (interactive)
+    ;; Ensure tab-bar-mode is enabled
+    ;; (when (not (bound-and-true-p tab-bar-mode))
+    ;;   (tab-bar-mode 1))
+    ;; Create a new tab
+    (tab-new)
+    ;; Open the regression directory in Dired mode in the new tab
+    (dired "\\\\regr3.ztaustin.local\\home\\cg\\regression-output")
+    ;; Refresh Dired buffer
+    (revert-buffer)
+    ;; Sort files by time if in 'Dired by name' mode
+    ;; (when (equal mode-name "Dired by name")
+    ;;   (dired-sort-toggle-or-edit))
+    ;; return should open file in a new window not replace the buffer
+    (define-key dired-mode-map (kbd "RET") 'dired-find-file-other-window)
+    )
+  )
 
-  (load "~/.emacs.d/my-zogotech.el")
+(defun z-find-kill (beginning end)
+  "take what is in the clipboard and remove matches from file"
+  (interactive "r")
+  (defalias 'rpex 'replace-regexp-in-string)
+  (let ( ;; set local vars
+	(my-query
+	 (rpex (read-string "SITE (Enter for \"ALVIN\"): " nil nil "ALVIN") ".*"  ;; site
+	       (rpex "\s[0-9]+:[0-9]+:[0-9]\s" ".*"
+		     (rpex "[0-9]+" ".*"  ;; numbers
+			   (regexp-quote (buffer-substring beginning end)))))))
+    (query-replace-regexp my-query "")
+    ))
+
+(defun z-sort-imports()
+  "Sorts and spaces python imports in a case insensitive zt way"
+  (interactive)
+  (let ((sort-fold-case t))
+    (mark-paragraph)
+    (align-regexp (region-beginning) (region-end) "from\\b.*?\\(\\s-*\\)import")
+    (sort-lines nil (region-beginning) (region-end))
+    (search-forward "import")
+    )
+  )
+
+(defun z-get-import()
+  "insert an import that is already used in your project"
+  (interactive)
+  ;; move cursor to the beginning of the line
+  (beginning-of-line)
+  (let (
+	(file-lines
+	 (split-string
+	  (shell-command-to-string (concat "cd " my-project-root
+					   " && "
+					   "rg --follow "
+					   "-I \"^from\\s+\\S+\\s+import\\s+\\S+.*$\" "
+					   " | tr -s \" \" "
+					   " | uniq "
+					   " | sort"
+					   ))
+	  "\n"))
+	(tbl (make-hash-table :test 'equal))
+	(ido-list))
+    (mapc (lambda (line)
+	    "Put each line in a hash table as well as ido-list."
+	    (puthash line line tbl)
+	    (push line ido-list)
+	    )
+	  file-lines)
+    (let
+	(
+	 (import (gethash (completing-read "? " ido-list) tbl)))
+      (insert import)
+      (insert "\n")
+      (z-sort-imports)
+      )
+    ))
+
+;; (fmakunbound 'xref-find-definitions)
+;; set tmp to the function slot #'xref-find-definitions
+;; do the thing
+;; set the function slot back to the original
+
+(evil-leader/set-key
+  "zz" 'z-init
+  "zc" 'my-code-review
+  "zr" 'z-open-regression
+  "si" 'z-sort-imports
+  "zi" 'z-get-import
+  )
+
+(defun my-shell-setup()
+  (interactive)
+  (load "~/.emacs.d/myshell.el")
+  (load "~/.emacs.d/mypdbtrack.el")
+  (add-hook 'prog-mode-hook (flycheck-mode nil))
+  )
+(defun my-debugger-setup()
+  (interactive)
+  ;; Prevent Emacs from raising its frame when the server opens a file
+  (global-flycheck-mode 0)
+  ;; turn on line numbers no matter what
+  (display-line-numbers-mode 1)
+  (setq server-raise-frame nil)
+  (server-start)
   )
 
 ;; EMACS CUSTOMIZATION STUFF BELOW
@@ -444,9 +698,10 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(copilot-chat-model "claude-3.7-sonnet")
  '(warning-suppress-log-types
-   '((copilot copilot-exceeds-max-char)
-     (copilot copilot-exceeds-max-char))))
+   '((copilot copilot-exceeds-max-char) (copilot copilot-exceeds-max-char)))
+ '(xref-show-definitions-function 'xref-show-definitions-completing-read))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

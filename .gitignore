@@ -1,9 +1,14 @@
 elpa
 auto-save-list
 .cache
+copilot.el
+etags
+tree-sitter
 backups
 places
 recentf
 savehist
 transient
 autosaves
+places
+server
