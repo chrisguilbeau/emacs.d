@@ -146,7 +146,6 @@
 (set-face-attribute 'tab-bar-tab nil :underline nil)
 (set-face-attribute 'tab-bar-tab nil :box nil)
 ;; set the font to be the same
-(set-face-attribute 'tab-bar nil :font "Comic Code-10")
 (tab-bar-mode 1)
 (setq tab-bar-show 1)
 
@@ -175,15 +174,21 @@
 (require 'flycheck)
 (add-hook 'js-mode-hook #'flycheck-mode)
 (add-hook my-python-hook #'flycheck-mode)
+;; only on windows hook
+(add-hook 'python-mode-hook
+	  (lambda ()
+	    (when (eq system-type 'windows-nt)
+	      (flycheck-mode 1)
+	      (setq-default flycheck-python-flake8-executable
+			    "h:/src/python/python.exe")
+	      (setq flycheck-jshintrc "C:/ZogoTech/hg/cg.dotfiles/jshint.config")
+	      )))
 (with-eval-after-load 'flycheck
   (setq-default flycheck-disabled-checkers '(python-pyright python-pylint python-mypy python-pycompile))
-  (setq-default flycheck-python-flake8-executable "h:/src/python/python.exe"))
+  )
 (setq flycheck-checker-error-threshold nil)
-(setq flycheck-flake8rc ".flake8")
+;; (setq flycheck-flake8rc ".flake8")
 (setq flycheck-highlighting-mode 'lines)
-;; (setq flycheck-javascript-jshint-executable
-;;       "C:\\Users\\cg\\scoop\\apps\\nodejs\\current\\bin\\jshint")
-(setq flycheck-jshintrc "C:/ZogoTech/hg/cg.dotfiles/jshint.config")
 (setq flycheck-locate-config-file-functions '(flycheck-locate-config-file-ancestor-directories))
 ;; only check on save
 (setq flycheck-check-syntax-automatically '(save mode-enabled))
@@ -230,6 +235,20 @@
 (setq my-ctags-languages "")
 (setq my-ctags-kinds "")
 (setq my-ctags-excludes "")
+
+
+(defun my-project-init()
+  (interactive)
+  (setq my-project-root (expand-file-name (directory-file-name (read-directory-name "Project root: " my-project-root))))
+  (setq my-project-prist my-project-root)
+  (setq my-complete-find-file-command "rg --files --path-separator / -tpy -tjs -tcss -ttxt ")
+  (setq my-diff-command "diff -qr -x .hg -x .git -x etags")
+  ;; set the window title to the project root
+  (setq frame-title-format my-project-root)
+  (cd my-project-root)
+  (find-file my-project-root)
+  (message "project initialized")
+  )
 
 ;; completers
 (defun my-completer (list-of-strings sink-fn)
@@ -503,9 +522,7 @@
   "v" 'my-project-split-right						;; split right
   "r" 'my-project-replace-under-cursor				        ;; replace under cursor
   "e" 'my-complete-find-file-force                                      ;; find files
-  "pe" 'my-complete-find-file						;; find files force
   "b" 'my-complete-buffer-tags-force                                    ;; complete buffer tags
-  "pb" 'my-complete-buffer-tags						;; complete buffer tags force
   "<tab>" 'tab-close
   "C-a" 'evil-numbers/inc-at-pt
   "C-x" 'evil-numbers/dec-at-pt
@@ -519,7 +536,7 @@
   "o" (lambda () (interactive) (find-file "~/.emacs.d/todo.org"))
   "q" 'evil-quit
   ;; ask user for directory to set as project root, use current project root as default strip the trailing slash and expand the path in case of tilde
-  "pp" (lambda () (interactive) (setq my-project-root (expand-file-name (directory-file-name (read-directory-name "Project root: " my-project-root)))))
+  "pp" 'my-project-init
   )
 
 (evil-define-key 'normal 'global (kbd "] <tab>") 'tab-next)
@@ -535,6 +552,7 @@
 ;; Mac only stuff
 (when (eq system-type 'darwin)
   (set-frame-font "Comic Code-13")
+  (set-face-attribute 'tab-bar nil :font "Comic Code-14")
   (defun z-init()
     (interactive)
     (setq my-project-root (expand-file-name "~/z/dev"))
@@ -554,6 +572,7 @@
 (when (eq system-type 'windows-nt)
   ;; set font to consolas
   (set-frame-font "Comic Code-10")
+  (set-face-attribute 'tab-bar nil :font "Comic Code-10")
   (defun get-junction-target (junction-dir)
     "Return the target directory of a Windows junction at JUNCTION-DIR.
     This function uses the Windows command `fsutil reparsepoint query` to
