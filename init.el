@@ -119,18 +119,19 @@
                                   ripgrep
                                   vertico
                                   rg
-                                  copilot
 				  copilot-chat
-                                  dash
                                   exec-path-from-shell
-                                  s
-                                  editorconfig
-                                  f
                                   ))
 (package-initialize)
 (unless package-archive-contents
   (package-refresh-contents))
 (package-install-selected-packages)
+
+;; new style use-package
+(use-package copilot
+  :vc (:url "https://github.com/copilot-emacs/copilot.el"
+            :rev :newest
+            :branch "main"))
 
 ;; tab-bar-mode
 ;; customize the colors
@@ -179,20 +180,15 @@
 	  (lambda ()
 	    (when (eq system-type 'windows-nt)
 	      (flycheck-mode 1)
-	      (setq-default flycheck-python-flake8-executable
-			    "h:/src/python/python.exe")
-	      (setq flycheck-jshintrc "C:/ZogoTech/hg/cg.dotfiles/jshint.config")
 	      )))
 (with-eval-after-load 'flycheck
   (setq-default flycheck-disabled-checkers '(python-pyright python-pylint python-mypy python-pycompile))
   )
 (setq flycheck-checker-error-threshold nil)
-;; (setq flycheck-flake8rc ".flake8")
 (setq flycheck-highlighting-mode 'lines)
 (setq flycheck-locate-config-file-functions '(flycheck-locate-config-file-ancestor-directories))
 ;; only check on save
 (setq flycheck-check-syntax-automatically '(save mode-enabled))
-;; (setq flycheck-check-syntax-automatically '(save))
 (evil-define-key 'normal 'global (kbd "]a") 'flycheck-next-error)
 (evil-define-key 'normal 'global (kbd "[a") 'flycheck-previous-error)
 ;; error list
@@ -203,16 +199,40 @@
 	       (side            . bottom)
 	       (reusable-frames . visible)
 	       (window-height   . 0.33)))
-(add-hook 'flycheck-after-syntax-check-hook
-	  (lambda ()
-	    (if flycheck-current-errors
-		(flycheck-list-errors)
-	      (let ((error-list-buffer (get-buffer "*Flycheck errors*")))
-		(when error-list-buffer
-		  (delete-windows-on error-list-buffer))))))
+;; (add-hook 'flycheck-after-syntax-check-hook
+;; 	  (lambda ()
+;; 	    (if flycheck-current-errors
+;; 		(flycheck-list-errors)
+;; 	      (let ((error-list-buffer (get-buffer "*Flycheck errors*")))
+;; 		(when error-list-buffer
+;; 		  (delete-windows-on error-list-buffer))))))
+
+(defvar-local my-flycheck-background-cookie nil
+  "Cookie for Flycheck background face remapping.")
+
+(defun my-flycheck-change-background ()
+  "Change buffer background based on Flycheck error severity."
+  (let* ((counts (flycheck-count-errors flycheck-current-errors))
+         (errors (alist-get 'error counts))
+         (warnings (alist-get 'warning counts))
+         (bg (cond (errors "misty rose")
+                   (warnings "light yellow")
+                   (t nil))))
+    ;; Remove existing background
+    (when my-flycheck-background-cookie
+      (face-remap-remove-relative my-flycheck-background-cookie)
+      (setq my-flycheck-background-cookie nil))
+    ;; Apply new background if needed
+    (when bg
+      (setq my-flycheck-background-cookie
+            (face-remap-add-relative 'default :background bg)))))
+
+(add-hook 'flycheck-after-syntax-check-hook #'my-flycheck-change-background)
+(add-hook 'flycheck-mode-hook
+          (lambda () (unless flycheck-mode (my-flycheck-change-background))))
 
 ;; copilot
-(add-to-list 'load-path "~/.emacs.d/copilot.el")
+;; (add-to-list 'load-path "~/.emacs.d/copilot.el")
 (require 'copilot)
 (add-hook 'prog-mode-hook 'copilot-mode) ;; enable copilot in all programming modes
 (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
@@ -573,6 +593,9 @@
   ;; set font to consolas
   (set-frame-font "Comic Code-10")
   (set-face-attribute 'tab-bar nil :font "Comic Code-10")
+  (setq-default flycheck-python-flake8-executable "h:/src/python/python.exe")
+  (setq-default flycheck-jshintrc "C:/ZogoTech/hg/cg.dotfiles/jshint.config")
+  ;; flycheck stuff
   (defun get-junction-target (junction-dir)
     "Return the target directory of a Windows junction at JUNCTION-DIR.
     This function uses the Windows command `fsutil reparsepoint query` to
@@ -600,8 +623,7 @@
     (setq my-project-prist (get-junction-target "h:/prist"))
     (setq my-complete-find-file-command "rg --files --path-separator / -tpy -tjs -tcss -ttxt ")
     (setq my-diff-command "diff -qr -x .hg -x *.pyc -x __pycache__ -x zebra -x etags -x nvim-undo -x vim-undo -x tags ")
-    ;; set the window title to the project root
-    (setq frame-title-format my-project-root)
+    (setq frame-title-format (string-trim (shell-command-to-string "z_get_proj")))
     (message "the z has been initted for windows...")
     )
   (defun z-open-regression ()
@@ -699,8 +721,13 @@
   (interactive)
   (load "~/.emacs.d/myshell.el")
   (load "~/.emacs.d/mypdbtrack.el")
-  (add-hook 'prog-mode-hook (flycheck-mode nil))
   )
+(my-shell-setup)
+;; add some hooks for after shell mode is started
+(add-hook 'shell-mode-hook
+	  (lambda ()
+	    (scroll-bar-mode -1)
+	    ))
 (defun my-debugger-setup()
   (interactive)
   ;; Prevent Emacs from raising its frame when the server opens a file
