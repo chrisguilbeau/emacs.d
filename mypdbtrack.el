@@ -40,8 +40,6 @@ having to restart the program."
 (defconst python-pdbtrack-track-range 10000
   "Max number of characters from end of buffer to search for stack entry.")
 
-
-
 ;; pdbtrack features
 
 (defun python-pdbtrack-overlay-arrow (activation)

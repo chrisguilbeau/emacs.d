@@ -89,12 +89,16 @@
       (when (file-directory-p path)
         (cd path)))))
 
-(defun my-shell-mode-hook ()
+(defun my-pdb-track-new-style ()
   "Shell mode customizations."
   (setq-local comint-prompt-regexp ".*\n>")
   (add-hook
    'comint-output-filter-functions
    'my-update-directory-tracker nil t))
 
-(add-hook 'shell-mode-hook 'my-shell-mode-hook)
-(add-hook 'shell-mode-hook 'compilation-shell-minor-mode)
+(add-hook 'shell-mode-hook
+          (lambda ()
+            (setenv "TERM" "dumb")))
+
+(require 'python)
+(load-file "~/.emacs.d/mypdbtrack.el")

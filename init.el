@@ -119,7 +119,7 @@
                                   ripgrep
                                   vertico
                                   rg
-				  copilot-chat
+                                  copilot-chat
                                   exec-path-from-shell
                                   ))
 (package-initialize)
@@ -127,11 +127,31 @@
   (package-refresh-contents))
 (package-install-selected-packages)
 
-;; new style use-package
-(use-package copilot
-  :vc (:url "https://github.com/copilot-emacs/copilot.el"
-            :rev :newest
-            :branch "main"))
+
+;; copilot
+add-to-list 'load-path "~/.emacs.d/copilot.el")
+(require 'copilot)
+(add-hook 'prog-mode-hook 'copilot-mode) ;; enable copilot in all programming modes
+(define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+(define-key copilot-completion-map (kbd "C-i") 'copilot-accept-completion)
+(setq copilot-indent-offset-warning-disable t
+      copilot-enable-predicates '(evil-insert-state-p)
+      copilot-max-char 99999
+      )
+
+;; new style use-package emacs 30+
+; (use-package copilot
+;   :vc (:url "https://github.com/copilot-emacs/copilot.el"
+;        :rev :newest
+;        :branch "main")
+;   :hook (prog-mode . copilot-mode)
+;   :config
+;   (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+;   (define-key copilot-completion-map (kbd "C-i") 'copilot-accept-completion)
+;   (setq copilot-indent-offset-warning-disable t
+;         copilot-enable-predicates '(evil-insert-state-p)
+;         copilot-max-char 99999)
+;   )
 
 ;; tab-bar-mode
 ;; customize the colors
@@ -230,17 +250,6 @@
 (add-hook 'flycheck-after-syntax-check-hook #'my-flycheck-change-background)
 (add-hook 'flycheck-mode-hook
           (lambda () (unless flycheck-mode (my-flycheck-change-background))))
-
-;; copilot
-;; (add-to-list 'load-path "~/.emacs.d/copilot.el")
-(require 'copilot)
-(add-hook 'prog-mode-hook 'copilot-mode) ;; enable copilot in all programming modes
-(define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
-(define-key copilot-completion-map (kbd "C-i") 'copilot-accept-completion)
-(setq copilot-indent-offset-warning-disable t
-      copilot-enable-predicates '(evil-insert-state-p)
-      copilot-max-char 99999
-      )
 
 ;; vertico for completion
 (require 'vertico)
@@ -510,17 +519,19 @@
                                               (mapcar #'car candidates) nil t))
                    (selected-xref (cdr (assoc selection candidates))))
               (xref-pop-to-location selected-xref nil))))))))
+(defun my-update-tags ()
+  (interactive)
+  (message (get-my-ctags-command))
+  (shell-command (get-my-ctags-command))
+  (visit-tags-table (concat my-project-root "/etags"))
+  )
 
 ;; keybindings
 ;; set keybindings with default leader
 (evil-leader/set-key
   "i" (lambda () (interactive) (find-file "~/.emacs.d/init.el"))	;; open init file
   "xb" 'eval-buffer							;; run current buffer
-  "xt" (lambda () (interactive)
-	 (message (get-my-ctags-command))
-	 (shell-command (get-my-ctags-command))
-	 (visit-tags-table (concat my-project-root "/etags"))
-	 ) ;; update tags
+  "xt" 'my-update-tags ;; update tags
   "t" (lambda () (interactive) (evil-jump-to-tag t))
   "T" 'find-tag
   "g" (lambda () (interactive)
@@ -546,7 +557,6 @@
   "<tab>" 'tab-close
   "C-a" 'evil-numbers/inc-at-pt
   "C-x" 'evil-numbers/dec-at-pt
-  "c" 'copilot-mode
   "H" (lambda () (interactive)
 	(if (vc-registered (buffer-file-name))
 	    (progn
@@ -617,13 +627,15 @@
 	(error "Directory %s is not a junction or its target could not be determined" junction-dir))))
   (defun z-init()
     (interactive)
-    (setq my-dev (get-junction-target "h:/dev"))
-    (visit-tags-table (concat my-dev "/etags"))
     (setq my-project-root (get-junction-target "h:/dev"))
+    (setq my-tags (concat my-project-root "/etags"))
     (setq my-project-prist (get-junction-target "h:/prist"))
     (setq my-complete-find-file-command "rg --files --path-separator / -tpy -tjs -tcss -ttxt ")
     (setq my-diff-command "diff -qr -x .hg -x *.pyc -x __pycache__ -x zebra -x etags -x nvim-undo -x vim-undo -x tags ")
     (setq frame-title-format (string-trim (shell-command-to-string "z_get_proj")))
+    ;; if etags doesn't exist, then make it
+    (unless (file-exists-p my-tags) (my-update-tags))
+    (visit-tags-table my-tags)
     (message "the z has been initted for windows...")
     )
   (defun z-open-regression ()
@@ -717,17 +729,9 @@
   "zi" 'z-get-import
   )
 
-(defun my-shell-setup()
-  (interactive)
-  (load "~/.emacs.d/myshell.el")
-  (load "~/.emacs.d/mypdbtrack.el")
-  )
-(my-shell-setup)
-;; add some hooks for after shell mode is started
-(add-hook 'shell-mode-hook
-	  (lambda ()
-	    (scroll-bar-mode -1)
-	    ))
+
+(load "~/.emacs.d/myshell.el")
+
 (defun my-debugger-setup()
   (interactive)
   ;; Prevent Emacs from raising its frame when the server opens a file
@@ -745,6 +749,9 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(copilot-chat-model "claude-3.7-sonnet")
+ '(package-selected-packages nil)
+ '(package-vc-selected-packages
+   '((copilot :url "https://github.com/copilot-emacs/copilot.el" :branch "main")))
  '(warning-suppress-log-types
    '((copilot copilot-exceeds-max-char) (copilot copilot-exceeds-max-char)))
  '(xref-show-definitions-function 'xref-show-definitions-completing-read))
