@@ -127,31 +127,34 @@
   (package-refresh-contents))
 (package-install-selected-packages)
 
-
-;; copilot
-add-to-list 'load-path "~/.emacs.d/copilot.el")
-(require 'copilot)
-(add-hook 'prog-mode-hook 'copilot-mode) ;; enable copilot in all programming modes
-(define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
-(define-key copilot-completion-map (kbd "C-i") 'copilot-accept-completion)
-(setq copilot-indent-offset-warning-disable t
-      copilot-enable-predicates '(evil-insert-state-p)
-      copilot-max-char 99999
-      )
+;; copilot emacs < 30
+;; (add-to-list 'load-path "~/.emacs.d/copilot.el")
+;; (require 'copilot)
+;; (add-hook 'prog-mode-hook 'copilot-mode) ;; enable copilot in all programming modes
+;; (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+;; (define-key copilot-completion-map (kbd "C-i") 'copilot-accept-completion)
+;; (setq copilot-indent-offset-warning-disable t
+;;       copilot-enable-predicates '(evil-insert-state-p)
+;;       copilot-max-char 99999
+;;       )
 
 ;; new style use-package emacs 30+
-; (use-package copilot
-;   :vc (:url "https://github.com/copilot-emacs/copilot.el"
-;        :rev :newest
-;        :branch "main")
-;   :hook (prog-mode . copilot-mode)
-;   :config
-;   (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
-;   (define-key copilot-completion-map (kbd "C-i") 'copilot-accept-completion)
-;   (setq copilot-indent-offset-warning-disable t
-;         copilot-enable-predicates '(evil-insert-state-p)
-;         copilot-max-char 99999)
-;   )
+(use-package copilot
+  :vc (:url "https://github.com/copilot-emacs/copilot.el"
+       :rev :newest
+       :branch "main")
+  :hook (prog-mode . copilot-mode)
+  :config
+  (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+  (define-key copilot-completion-map (kbd "C-i") 'copilot-accept-completion)
+  (setq copilot-indent-offset-warning-disable t
+        copilot-enable-predicates '(evil-insert-state-p)
+        copilot-max-char 99999)
+  )
+
+;; install treesitter python grammar if not installed
+(unless (treesit-available-p)
+  (treesit-install-language-grammar 'python))
 
 ;; tab-bar-mode
 ;; customize the colors
