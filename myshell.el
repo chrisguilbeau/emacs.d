@@ -6,6 +6,7 @@
              '(python-traceback
                "^  File \"\\(.*?\\)\", line \\([0-9]+\\)," 1 2))
 (setenv "PYTHONUNBUFFERED" "1")
+(setenv "PROMPT" "$P$G ")
 (setq comint-prompt-read-only t)
 (defun go-to-end-of-prompt ()
   "Move cursor to end of prompt when entering insert mode."
@@ -15,6 +16,7 @@
 (with-eval-after-load 'evil
   (evil-define-key 'insert comint-mode-map (kbd "<up>") 'comint-previous-input)
   (evil-define-key 'insert comint-mode-map (kbd "<down>") 'comint-next-input)
+  (evil-define-key 'insert comint-mode-map (kbd "<f5>") 'my-complete-shell-history)
   )
 
 (defun switch-to-evil-state-on-click ()
@@ -27,6 +29,15 @@
 	      "l" 'comint-clear-buffer
 	      "~" 'restart-shell)
 	    (scroll-bar-mode)
+	    ;; Enable visual aids for Python debugging
+	    (add-hook 'python-mode-hook
+		      (lambda ()
+			(display-line-numbers-mode 1)
+			(hl-line-mode 1)))
+	    (add-hook 'python-ts-mode-hook
+		      (lambda ()
+			(display-line-numbers-mode 1)
+			(hl-line-mode 1)))
 	    (define-key shell-mode-map [down-mouse-1] 'switch-to-evil-state-on-click)))
 
 ;; (defun switch-to-evil-normal-state-on-click (event)
@@ -37,6 +48,14 @@
 ;; (add-hook 'shell-mode-hook
 ;;           (lambda ()
 ;;             (define-key shell-mode-map [down-mouse-1] 'switch-to-evil-normal-state-on-click)))
+
+(defun my-new-shell ()
+  "Make a new named shell, even if others exist, equiv to C-u M-x shell."
+  (interactive)
+  (let ((name (read-string "Shell name: ")))
+    (if (get-buffer name)
+	(switch-to-buffer name)
+      (shell name))))
 
 (defun shell-frame ()
   "Focus the shell frame. If it doesn't exist, create one and open a shell."
@@ -98,7 +117,8 @@
 
 (add-hook 'shell-mode-hook
           (lambda ()
-            (setenv "TERM" "dumb")))
+            (setenv "TERM" "dumb")
+	    ))
 
 (require 'python)
 (load-file "~/.emacs.d/mypdbtrack.el")

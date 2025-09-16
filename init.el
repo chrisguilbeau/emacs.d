@@ -1,78 +1,64 @@
-;;; init.el --- Organized Emacs configuration file
-
+;;; init.el --- Clean Emacs configuration
 ;;; Commentary:
-;;; This is a comprehensive Emacs configuration with evil-mode, project management,
-;;; and various productivity enhancements.
-
+;;; A streamlined Emacs setup with evil-mode and development tools.
 ;;; Code:
 
-;; ============================================================================
-;; SECTION 1: BASIC EMACS SETTINGS AND APPEARANCE
-;; ============================================================================
+;; Basic settings
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(setq inhibit-startup-screen 1)
 
-;; Disable UI elements for a cleaner look
-(menu-bar-mode -1)                  ; Disable menu bar
-(tool-bar-mode -1)                  ; Disable toolbar
-(scroll-bar-mode -1)                ; Disable scroll bars
-(setq inhibit-startup-screen 1)     ; Disable startup screen
-
-;; Buffer and editing preferences
-(setq-default fill-column 80)       ; Set line width to 80 characters
-(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode) ; Show column indicator
-(display-fill-column-indicator-mode) ; Enable the column indicator globally
+(setq-default fill-column 80)
+(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
+(display-fill-column-indicator-mode)
 (setq my-line-indicator-color "misty rose")
 (set-face-background 'fill-column-indicator my-line-indicator-color)
 (set-face-foreground 'fill-column-indicator my-line-indicator-color)
 
-;; Whitespace handling
-(setq tab-width 4)                  ; Set tab width to 4 spaces
-(setq indent-tabs-mode nil)         ; Use spaces instead of tabs
-(setq mode-require-final-newline t) ; Ensure files end with a newline
-(add-hook 'before-save-hook 'delete-trailing-whitespace) ; Remove trailing whitespace on save
+(setq tab-width 4)
+(setq indent-tabs-mode nil)
+(setq mode-require-final-newline t)
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
 
-;; UI feedback settings
-(setq echo-keystrokes .1)           ; Show keys being pressed quickly
-(setq ring-bell-function 'ignore)   ; Disable the bell/beep
+(setq echo-keystrokes .1)
+(setq ring-bell-function 'ignore)
 
-;; Backup and auto-save configuration
+;; Backup and autosave
 (unless (file-directory-p "~/.emacs.d/autosaves")
   (make-directory "~/.emacs.d/autosaves"))
 (setq auto-save-file-name-transforms
       `((".*" "~/.emacs.d/autosaves/" t)))
 (setq backup-directory-alist
       `(("." . "~/.emacs.d/backups/")))
-(setq create-lockfiles nil)         ; Don't create lock files
+(setq create-lockfiles nil)
 
-;; Session persistence settings
-(save-place-mode 1)                 ; Remember cursor position in files
-(savehist-mode 1)                   ; Save minibuffer history
+;; Session persistence
+(save-place-mode 1)
+(savehist-mode 1)
 (setq savehist-file "~/.emacs.d/savehist")
 
-;; Recent files mode
 (require 'recentf)
 (recentf-mode 1)
-(setq recentf-max-saved-items 100)  ; Keep track of 100 recent files
+(setq recentf-max-saved-items 100)
 
-;; Buffer naming configuration
 (require 'uniquify)
 (setq uniquify-buffer-name-style 'forward)
 (setq uniquify-min-dir-content 1)
 (setq uniquify-strip-common-suffix t)
 
-;; Window management
-(winner-mode 1)                     ; Enable window configuration undo/redo
+(winner-mode 1)
 
-;; Function name display
-(which-function-mode 1)             ; Show current function in header
+;; Function display
+(which-function-mode 1)
 (setq which-func-unknown "n/a")
 (setq-default header-line-format
               '((which-func-mode ("" which-func-format " "))))
 
-;; Tab bar configuration
+;; Tab bar
 (tab-bar-mode 1)
 (setq tab-bar-show 1)
 
-;; Customize tab bar colors
 (set-face-attribute 'tab-bar nil :background "white")
 (set-face-attribute 'tab-bar nil :foreground "black")
 (set-face-attribute 'tab-bar-tab nil :background "grey90")
@@ -84,126 +70,164 @@
 (set-face-attribute 'tab-bar-tab nil :box nil)
 (set-face-attribute 'tab-bar-tab nil :underline nil)
 
-;; Platform-specific font settings
-(cond
- ((eq system-type 'darwin)
-  (set-frame-font "Comic Code-13")
-  (set-face-attribute 'tab-bar nil :font "Comic Code-14"))
- ((eq system-type 'windows-nt)
-  (set-frame-font "Comic Code-10")
-  (set-face-attribute 'tab-bar nil :font "Comic Code-10")))
+;; Fonts
+(cond ((eq system-type 'darwin)
+       (set-frame-font "Comic Code-13")
+       (set-face-attribute 'tab-bar nil :font "Comic Code-14"))
+      ((eq system-type 'windows-nt)
+       (set-frame-font "Comic Code-10")
+       (set-face-attribute 'tab-bar nil :font "Comic Code-10")))
 
-;; ============================================================================
-;; SECTION 2: PACKAGE MANAGEMENT AND INSTALLATION
-;; ============================================================================
-
-;; Set up package repositories
+;; Package management
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
-;; Define packages to install
 (setq package-selected-packages '(evil
                                   evil-leader
                                   evil-commentary
                                   evil-numbers
-				  evil-surround
-				  gruvbox-theme
-				  solarized-theme
+                                  evil-surround
+                                  ;; gptel
+                                  gruvbox-theme
+                                  solarized-theme
                                   nyan-mode
                                   flycheck
                                   ripgrep
                                   vertico
                                   rg
                                   copilot-chat
-                                  exec-path-from-shell
-                                  ))
+                                  exec-path-from-shell))
 
-;; Initialize and refresh package system if needed
 (package-initialize)
-(unless package-archive-contents
-  (package-refresh-contents))
 (package-install-selected-packages)
 
-;; Initialize exec-path-from-shell on macOS
 (when (memq window-system '(mac ns x))
   (exec-path-from-shell-initialize))
 
-;; Setup Copilot using use-package
-(use-package copilot
+;; Polymode setup
+(use-package polymode
   :ensure t
-  :vc (:url "https://github.com/copilot-emacs/copilot.el"
-       :rev :newest
-       :branch "main")
   :config
-  (add-hook 'prog-mode-hook 'copilot-mode)
-  (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
-  ;; use ctrl space to suggest completion
-  (define-key copilot-completion-map (kbd "<C-TAB>") 'copilot-next-completion)
-  (define-key copilot-completion-map (kbd "<C-S-TAB>") 'copilot-previous-completion)
-  (define-key copilot-completion-map (kbd "<C-return>") 'copilot-accept-completion-by-word)
-  (define-key copilot-completion-map (kbd "<C-S-return>") 'copilot-accept-completion-by-line)
+  (define-hostmode poly-python-hostmode
+    :mode 'python-ts-mode)
 
-  (setq copilot-indent-offset-warning-disable t
-        copilot-enable-predicates '(evil-insert-state-p)
-	copilot-idle-delay 1
-        copilot-max-char -1)
-  )
+  (define-innermode poly-python-sql-innermode
+    :mode 'sql-mode
+    :head-matcher "\\(?:[fF]\\)?\\(?:\"\"\"\\|'''\\)[ \t]*--sql[^\n]*\n"
+    :tail-matcher "[ \t]*\\(?:\"\"\"\\|'''\\)"
+    :head-mode 'host
+    :tail-mode 'host
+    :allow-nested nil
+    :keep-in-mode 'host)
 
-;; ============================================================================
-;; SECTION 3: EVIL MODE CONFIGURATION
-;; ============================================================================
+  (define-innermode poly-css-innermode
+    :mode 'css-mode
+    :head-matcher "style='''"
+    :tail-matcher "'''")
 
-;; Basic Evil setup
+  (define-polymode poly-python-z-mode
+    :hostmode 'poly-python-hostmode
+    :innermodes '(poly-python-sql-innermode poly-css-innermode))
+
+  (defun my-polymode-inner-setup ()
+    (when (or (eq major-mode 'css-mode)
+              (eq major-mode 'sql-mode))
+      (setq-local indent-tabs-mode nil)
+      (setq-local tab-width 2))))
+
+(defun my-toggle-python-sql-mode ()
+  "Toggle polymode for Python SQL strings."
+  (interactive)
+  (if (eq major-mode 'poly-python-sql-mode)
+      (python-ts-mode)
+    (poly-python-sql-mode)))
+
+;; Org-mode fix for evil
+;; Fix tab behavior in org-mode with evil-mode
+(with-eval-after-load 'evil
+  (with-eval-after-load 'org
+    ;; Allow tab to work for folding/unfolding in org-mode
+    (evil-define-key '(normal) org-mode-map (kbd "<tab>") #'org-cycle)
+    (evil-define-key '(normal) org-mode-map (kbd "TAB") #'org-cycle)
+
+    ;; For visibility cycling on a global level (shift+tab)
+    (evil-define-key '(normal) org-mode-map (kbd "<S-tab>") #'org-global-cycle)
+    (evil-define-key '(normal) org-mode-map (kbd "<backtab>") #'org-global-cycle)
+
+    ;; For insert mode tab behavior
+    (evil-define-key '(insert) org-mode-map (kbd "<tab>") #'org-cycle)
+    (evil-define-key '(insert) org-mode-map (kbd "TAB") #'org-cycle)))
+
+
+;; time search
+(defun my-time-search ()
+  "Set up outline-minor-mode to fold on timestamp lines.
+   Enables folding for lines starting with YYYY-MM-DD format."
+  (interactive)
+  (outline-minor-mode 1)
+  (setq-local outline-regexp "^[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}")
+  (message "Time-based folding enabled. Use C-c @ C-q to hide all, C-c @ C-a to show all, C-c @ C-t to toggle."))
+
+;; ;; GPtel and Copilot
+;; (gptel-make-gh-copilot "Copilot")
+;; (setq gptel-model 'claude-3.7-sonnet
+;;       gptel-backend (gptel-make-gh-copilot "Copilot"))
+
+;; (use-package copilot
+;;   :ensure t
+;;   :vc (:url "https://github.com/copilot-emacs/copilot.el"
+;;        :rev :newest
+;;        :branch "main")
+;;   :config
+;;   (add-hook 'prog-mode-hook 'copilot-mode)
+;;   (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+;;   (define-key copilot-completion-map (kbd "<C-TAB>") 'copilot-next-completion)
+;;   (define-key copilot-completion-map (kbd "<C-S-TAB>") 'copilot-previous-completion)
+;;   (define-key copilot-completion-map (kbd "<C-return>") 'copilot-accept-completion-by-word)
+;;   (define-key copilot-completion-map (kbd "<C-S-return>") 'copilot-accept-completion-by-line)
+;;   (setq copilot-indent-offset-warning-disable t
+;;         copilot-enable-predicates '(evil-insert-state-p)
+;;         copilot-idle-delay 0.2
+;;         copilot-max-char -1))
+
+;; Evil mode
 (require 'evil)
 (evil-mode 1)
 (evil-set-undo-system 'undo-redo)
 
-;; Evil surround setup
 (require 'evil-surround)
 (global-evil-surround-mode 1)
 
-;; Evil leader setup
 (require 'evil-leader)
 (global-evil-leader-mode)
 
-;; Evil commentary
 (require 'evil-commentary)
 (evil-commentary-mode)
 
-;; Basic Evil navigation bindings
 (evil-define-key 'normal 'global (kbd "] <tab>") 'tab-next)
 (evil-define-key 'normal 'global (kbd "[ <tab>") 'tab-previous)
 (evil-define-key 'normal 'global (kbd "]q") 'next-error)
 (evil-define-key 'normal 'global (kbd "[q") 'previous-error)
 (evil-define-key 'insert 'global (kbd "C-S-n") 'copilot-complete)
 
-;; ============================================================================
-;; SECTION 4: EDITING AND CODING ENHANCEMENTS
-;; ============================================================================
-
-;; Flycheck configuration
+;; Flycheck
 (require 'flycheck)
 (setq flycheck-checker-error-threshold nil)
 (setq flycheck-highlighting-mode 'lines)
 (setq flycheck-locate-config-file-functions '(flycheck-locate-config-file-ancestor-directories))
 (setq flycheck-check-syntax-automatically '(save mode-enabled))
 
-;; Windows specific Flycheck setup
 (when (eq system-type 'windows-nt)
   (setq-default flycheck-python-flake8-executable "h:/src/python/python.exe")
   (setq-default flycheck-jshintrc "C:/ZogoTech/hg/cg.dotfiles/jshint.config"))
 
-;; Add Flycheck hooks for various modes
 (add-hook 'js-mode-hook #'flycheck-mode)
 (add-hook 'python-mode-hook #'flycheck-mode)
 (add-hook 'python-ts-mode-hook #'flycheck-mode)
 
-;; Flycheck display customization
 (with-eval-after-load 'flycheck
-  (setq-default flycheck-disabled-checkers '(python-pyright python-pylint python-mypy python-pycompile))
-  )
+  (setq-default flycheck-disabled-checkers '(python-pyright python-pylint python-mypy python-pycompile)))
 
-;; Configure Flycheck error list display
 (add-to-list 'display-buffer-alist
              `(,(rx bos "*Flycheck errors*" eos)
                (display-buffer-reuse-window
@@ -212,7 +236,7 @@
                (reusable-frames . visible)
                (window-height   . 0.33)))
 
-;; Flycheck background color change based on errors
+;; Flycheck background colors
 (defvar-local my-flycheck-background-cookie nil
   "Cookie for Flycheck background face remapping.")
 
@@ -224,11 +248,9 @@
          (bg (cond (errors "misty rose")
                    (warnings "light yellow")
                    (t nil))))
-    ;; Remove existing background
     (when my-flycheck-background-cookie
       (face-remap-remove-relative my-flycheck-background-cookie)
       (setq my-flycheck-background-cookie nil))
-    ;; Apply new background if needed
     (when bg
       (setq my-flycheck-background-cookie
             (face-remap-add-relative 'default :background bg)))))
@@ -237,113 +259,75 @@
 (add-hook 'flycheck-mode-hook
           (lambda () (unless flycheck-mode (my-flycheck-change-background))))
 
-;; Navigation in Flycheck errors
 (evil-define-key 'normal 'global (kbd "]a") 'flycheck-next-error)
 (evil-define-key 'normal 'global (kbd "[a") 'flycheck-previous-error)
 
-;; Vertico completion setup
+;; Vertico completion
 (require 'vertico)
 (setq completion-styles '(basic substring partial-completion flex))
 (setq completion-ignore-case t)
 (vertico-mode 1)
 
-;; Ediff configuration
+;; Ediff
 (setq ediff-split-window-function 'split-window-horizontally)
 (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+
 (defun my-ediff-restore-windows ()
   "Restore the previous window configuration after an ediff session."
   (winner-undo))
+
 (add-hook 'ediff-quit-hook #'my-ediff-restore-windows)
 
-;; ============================================================================
-;; SECTION 5: PYTHON DEVELOPMENT CONFIGURATION
-;; ============================================================================
-
-;; Determine which Python mode hook to use (treesit if available)
+;; Python configuration
 (setq my-python-hook (if (treesit-available-p) 'python-ts-mode-hook 'python-mode-hook))
-;; (setq my-python-hook 'python-mode-hook)
 
-;; Install treesitter Python grammar if not already available
-;; Note: This might be better placed elsewhere, as it tries to run every time
-;; Emacs starts until it succeeds. Consider manual install or using :ensure with
-;; a package definition if python-ts-mode is managed by package.el.
-(unless (treesit-language-available-p 'python) ; Use treesit-language-available-p
+(unless (treesit-language-available-p 'python)
   (treesit-install-language-grammar 'python))
 
-;; Setup treesitter mode remapping for Python
 (setq major-mode-remap-alist
       '((python-mode . python-ts-mode)))
 
-;; Fix for hanging indents
 (defun rm-advice-python-indent-line-function ()
   "Add one indentation level when line begins with closing parenthesis."
-  ;; remember where we are, and move back to the start of indentation
   (let ((point-current (point)))
     (back-to-indentation)
     (let ((chars-after-indentation (- point-current (point))))
-      ;; if line begins with any form of closing parenthesis, add indent level
       (if (looking-at "[])}]")
           (insert (make-string python-indent-offset ?\s)))
-      ;; if cursor was to the right of indentation, then move right to
-      ;; where it was; otherwise, leave cursor at indentation
       (if (> chars-after-indentation 0)
           (right-char chars-after-indentation)))))
 
 (advice-add 'python-indent-line-function :after
             #'rm-advice-python-indent-line-function)
 
-
-;; Python-specific settings
 (add-hook my-python-hook
           (lambda ()
-	    ;; unset the local indent-region-function so it uses the fallback
-	    (setq-local indent-region-function nil)
-            ;; --- Core Indentation Settings ---
-            ;; 1. Use spaces, never hard tabs
+            (setq-local indent-region-function nil)
             (setq-local indent-tabs-mode nil)
-
-            ;; 2. Set indentation level to 4 spaces
             (setq-local python-indent-offset 4)
             (setq python-indent-offset 4)
             (setq python-continuation-offset 4)
-
-            ;; 3. (Optional but recommended) Ensure tab *display* width is also 4
-            ;; This affects how existing tab characters are displayed, if any.
             (setq-local tab-width 4)
-            ;; --- End Core Indentation Settings ---
 
-            ;; You might not even need this binding anymore, as python-mode
-            ;; usually sets up TAB correctly when the above variables are set.
-            ;; Try commenting it out first to see if default behavior works.
-            ;; (local-set-key (kbd "TAB") 'indent-relative)
-
-            ;; Set some evil leader bindings
             (evil-leader/set-key
+              "=" 'my-pyyapf-format-block
+              ";" (lambda ()
+                    (interactive)
+                    (let ((indentation (save-excursion
+                                         (back-to-indentation)
+                                         (buffer-substring-no-properties (line-beginning-position)
+                                                                         (point)))))
+                      (beginning-of-line)
+                      (open-line 1)
+                      (insert indentation "breakpoint();"))))))
 
-	      "=" 'my-pyyapf-format-block  ;; Format block with yapf
-             ";" (lambda ()
-                   (interactive)
-                   ;; Grab the indentation from the current line
-                   (let ((indentation (save-excursion
-                                        (back-to-indentation)
-                                        (buffer-substring-no-properties (line-beginning-position)
-                                                                        (point)))))
-                     ;; Move to start of current line
-                     (beginning-of-line)
-                     ;; Open a blank line above
-                     (open-line 1)
-                     ;; Insert indentation and `breakpoint();`
-                     (insert indentation "breakpoint();")
-                     )))))
-
-;; custom indentation function
+;; Python functions
 (defun my-python-select-block ()
   "Select the current block of code in Python mode."
   (interactive)
   (evil-visual-line (python-nav-beginning-of-block)
-		    (python-nav-end-of-block))
-  (python-nav-end-of-block)
-  )
+                    (python-nav-end-of-block))
+  (python-nav-end-of-block))
 
 (defun my-pyyapf-format-block (begin end)
   "Format the selected region using pyyapf.py, or if no region is active, the current block of code."
@@ -351,14 +335,12 @@
   (unless (use-region-p)
     (save-excursion
       (python-nav-beginning-of-block)
-      ;; go to beginning of line
       (beginning-of-line)
       (setq begin (point))
       (python-nav-end-of-block)
       (setq end (point))))
   (shell-command-on-region begin end "pyyapf.py" nil t))
 
-;; Python-specific Z functions
 (defun z-sort-imports()
   "Sorts and spaces python imports in a case insensitive zt way"
   (interactive)
@@ -366,17 +348,13 @@
     (mark-paragraph)
     (align-regexp (region-beginning) (region-end) "from\\b.*?\\(\\s-*\\)import")
     (sort-lines nil (region-beginning) (region-end))
-    (search-forward "import")
-    )
-  )
+    (search-forward "import")))
 
 (defun z-get-import()
   "Insert an import that is already used in your project"
   (interactive)
-  ;; Move cursor to the beginning of the line
   (beginning-of-line)
-  (let (
-        (file-lines
+  (let ((file-lines
          (split-string
           (shell-command-to-string (concat "cd " my-project-root
                                    " && "
@@ -384,31 +362,20 @@
                                    "-I \"^from\\s+\\S+\\s+import\\s+\\S+.*$\" "
                                    " | tr -s \" \" "
                                    " | uniq "
-                                   " | sort"
-                                   ))
+                                   " | sort"))
           "\n"))
         (tbl (make-hash-table :test 'equal))
         (ido-list))
     (mapc (lambda (line)
-            "Put each line in a hash table as well as ido-list."
             (puthash line line tbl)
-            (push line ido-list)
-            )
+            (push line ido-list))
           file-lines)
-    (let
-        (
-         (import (gethash (completing-read "? " ido-list) tbl)))
+    (let ((import (gethash (completing-read "? " ido-list) tbl)))
       (insert import)
       (insert "\n")
-      (z-sort-imports)
-      )
-    ))
+      (z-sort-imports))))
 
-;; ============================================================================
-;; SECTION 6: PROJECT MANAGEMENT
-;; ============================================================================
-
-;; Project variables
+;; Project management
 (setq my-project-root (expand-file-name "."))
 (setq my-project-prist my-project-root)
 (setq my-ctags-languages "")
@@ -417,21 +384,17 @@
 (setq my-complete-find-file-command "rg --files --path-separator / ")
 (setq my-diff-command "diff -qr -x .hg -x .git -x etags")
 
-;; Project initialization
 (defun my-project-init()
   (interactive)
   (setq my-project-root (expand-file-name (directory-file-name (read-directory-name "Project root: " my-project-root))))
   (setq my-project-prist my-project-root)
   (setq my-complete-find-file-command "rg --files --path-separator / -tpy -tjs -tcss -ttxt ")
   (setq my-diff-command "diff -qr -x .hg -x .git -x etags")
-  ;; Set the window title to the project root
   (setq frame-title-format my-project-root)
   (cd my-project-root)
   (find-file my-project-root)
-  (message "project initialized")
-  )
+  (message "project initialized"))
 
-;; Project-specific ripgrep search
 (defun my-project-rg ()
   (interactive)
   (let* ((default-query (thing-at-point 'word t))
@@ -441,41 +404,34 @@
          (dir (directory-file-name (read-directory-name "Directory: " my-project-root))))
     (rg query files dir)))
 
-;; Project-wide replace under cursor
 (defun my-project-replace-under-cursor()
   (interactive)
   (if (use-region-p)
-      (let (
-            (selection
+      (let ((selection
              (buffer-substring-no-properties (region-beginning) (region-end))))
         (if (= (length selection) 0)
             (message "empty string")
-          (evil-ex (concat ".,$s/" selection "/"))
-          ))
+          (evil-ex (concat ".,$s/" selection "/"))))
     (evil-ex (concat ".,$s/" (thing-at-point 'word) "/"))))
 
-;; Project window splitting
 (defun my-project-split-right ()
   "Split the current window once to the right, then force all but the
    right-most windows in the frame to be 85 columns wide."
   (interactive)
   (evil-window-vsplit)
   (let* ((target-width 85)
-         ;; Get all windows in the *selected frame*, skipping minibuffers.
-         ;; Then filter out non-window objects (just in case).
          (ws (sort (cl-remove-if-not #'windowp
                                      (window-list (selected-frame) 'no-minibuffer))
                    (lambda (w1 w2)
                      (< (window-left-column w1)
                         (window-left-column w2))))))
-    ;; Resize each window except the last one
     (dolist (w (butlast ws))
       (with-selected-window w
         (let ((delta (- target-width (window-total-width w))))
           (ignore-errors
             (window-resize w delta t)))))))
 
-;; Code review functionality
+;; Code review
 (define-minor-mode my-code-review-mode
   "Minor mode for a code review"
   :init-value nil
@@ -483,33 +439,24 @@
   :global nil
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "<return>") 'my-open-diff)
-            map)
-  )
+            map))
 
 (defun my-open-diff()
   (interactive)
-  (let (
-        (parts (split-string (thing-at-point 'line) " "))
-        )
-    (ediff (nth 1 parts) (nth 3 parts))
-    ))
+  (let ((parts (split-string (thing-at-point 'line) " ")))
+    (ediff (nth 1 parts) (nth 3 parts))))
 
 (defun my-code-review ()
   "Compare source to pristine copy."
-  (interactive) ;; Allows the function to be called interactively
-  ;; If a buffer named "code-review" exists, kill it
+  (interactive)
   (when-let ((existing-buf (get-buffer "code-review")))
     (kill-buffer existing-buf))
-  ;; Create a new buffer named "code-review"
   (let (($buf (generate-new-buffer "code-review")))
-    ;; Create a new tab and switch to it
     (tab-new)
     (switch-to-buffer $buf)
-    ;; Set up the buffer with the necessary modes
-    (text-mode)             ;; Simple text editing mode
-    (my-code-review-mode)   ;; Custom mode for code review
-    (hl-line-mode)          ;; Highlight the current line
-    ;; Prompt the user for the left directory and use it as the default for the right directory
+    (text-mode)
+    (my-code-review-mode)
+    (hl-line-mode)
     (let* ((left-dir (expand-file-name (directory-file-name
                                         (read-directory-name "left: " my-project-prist))))
            (right-dir (expand-file-name (directory-file-name
@@ -520,21 +467,13 @@
                  (shell-quote-argument left-dir)
                  " "
                  (shell-quote-argument right-dir))))
-      ;; Print the constructed command string to the Emacs messages buffer
       (message "cmd: %s" cmd)
-      ;; Run the shell command and insert its output into the buffer
       (insert (shell-command-to-string cmd)))
-    ;; Return the buffer object representing the new buffer
     $buf))
 
-;; ============================================================================
-;; SECTION 7: TAGS AND NAVIGATION
-;; ============================================================================
-
-;; Tags configuration
+;; Tags
 (setq tags-case-fold-search nil)
 
-;; Generate and update tags
 (defun get-my-ctags-command()
   (concat "ctags -Ref " my-project-root "/etags " my-project-root))
 
@@ -542,10 +481,8 @@
   (interactive)
   (message (get-my-ctags-command))
   (shell-command (get-my-ctags-command))
-  (visit-tags-table (concat my-project-root "/etags"))
-  )
+  (visit-tags-table (concat my-project-root "/etags")))
 
-;; Improved Xref definitions finder with completion
 (defun my-xref-find-definitions-with-completion (identifier)
   "Find definitions of IDENTIFIER using completing-read for selection."
   (interactive (list (xref--read-identifier "Find definitions of: ")))
@@ -556,7 +493,6 @@
         (message "No definitions found for: %s" identifier)
       (xref--with-collection xrefs
         (let ((candidates nil))
-          ;; Build list of candidates with nice display format
           (xref--collection-table
            (lambda (xref)
              (let* ((loc (xref-location xref))
@@ -571,24 +507,17 @@
                                      (or summary ""))))
                (push (cons display xref) candidates))))
           (if (= (length candidates) 1)
-              ;; If only one candidate, just go there
               (xref-pop-to-location (cdar candidates) nil)
-            ;; Otherwise use completing-read
             (let* ((selection (completing-read "Choose definition: "
                                               (mapcar #'car candidates) nil t))
                    (selected-xref (cdr (assoc selection candidates))))
               (xref-pop-to-location selected-xref nil))))))))
 
-;; ============================================================================
-;; SECTION 8: COMPLETION FUNCTIONS
-;; ============================================================================
-
-;; Generic completer functions
+;; Completion functions
 (defun my-completer (list-of-strings sink-fn)
   "A generic completer that takes a command and a sink function."
   (interactive)
-  (let (
-        (tbl (make-hash-table :test 'equal)))
+  (let ((tbl (make-hash-table :test 'equal)))
     (mapc (lambda (line) (puthash line line tbl)) list-of-strings)
     (funcall sink-fn (gethash
                       (completing-read "? " (hash-table-keys tbl)) tbl))))
@@ -610,7 +539,6 @@
             (insert (string-join result "\n"))))
         (my-completer result sink-fn)))))
 
-;; Various completion commands
 (defun my-complete-find-init (&optional force-refresh)
   (interactive "P")
   (my-completer-cmd (concat "rg --files " (expand-file-name "~/.emacs.d")) 'find-file "find-init.cache" force-refresh))
@@ -649,16 +577,64 @@
    (mapcar 'buffer-name (buffer-list))
    (lambda (line) (switch-to-buffer line))))
 
-(defun my-complete-kill-ring ()
+(defun my-complete-kill-ring-old ()
   "Select from kill ring and insert at point."
   (interactive)
   (unless kill-ring
     (error "Kill ring is empty"))
-  ;; Temporarily override completion styles to 'basic to avoid sorting
   (let ((vertico-sort-function 'nil))
     (setq selection (completing-read "Select from kill ring: " kill-ring nil t))
     (when selection
       (insert selection))))
+
+(defun debug-last-command ()
+  "Show what the last command was."
+  (interactive)
+  (message "last-command: %s" last-command))
+
+;; Modified kill ring function with debugging
+(defun my-complete-kill-ring ()
+  "Select from kill ring and insert at point. If last command was a paste, replace that text."
+  (interactive)
+  (unless kill-ring
+    (error "Kill ring is empty"))
+  ;; Debug: show what last-command is
+  (message "Debug: last-command is %s" last-command)
+  (let ((vertico-sort-function 'nil)
+        ;; Check for common Evil paste commands
+        (replacing-paste (or (eq last-command 'yank)
+                            (eq last-command 'evil-paste-after)
+                            (eq last-command 'evil-paste-before)
+                            (eq last-command 'evil-put)
+                            ;; Add the actual command name once you find it
+                            )))
+    (setq selection (completing-read "Select from kill ring: " kill-ring nil t))
+    (when selection
+      (if replacing-paste
+          (progn
+            (message "Replacing previous paste")
+            (delete-region (mark t) (point))
+            (insert selection)
+            (setq this-command 'yank))
+        (progn
+          (message "Regular insert (last-command was: %s)" last-command)
+          (insert selection))))))
+
+(defun my-complete-kill-ring ()
+  "Select from kill ring. Replace selection if active, otherwise insert at point."
+  (interactive)
+  (unless kill-ring
+    (error "Kill ring is empty"))
+  (let ((vertico-sort-function 'nil))
+    (setq selection (completing-read "Select from kill ring: " kill-ring nil t))
+    (when selection
+      (if (use-region-p)
+          ;; Replace the selected region
+          (progn
+            (delete-region (region-beginning) (region-end))
+            (insert selection))
+        ;; Just insert at point
+        (insert selection)))))
 
 (defun my-complete-project-tags (&optional force-refresh)
   "Complete project tags."
@@ -677,30 +653,32 @@
      (let ((spl (split-string line)))
        (message "%s" (prin1-to-string spl))
        (let ((filename (nth 3 spl))
-             (line (string-to-number (nth 2 spl)))
-             )
+             (line (string-to-number (nth 2 spl))))
          (find-file filename)
-         (goto-line line)
-         )))
+         (goto-line line))))
    "project-tags.cache" force-refresh))
 
 (defun my-complete-project-tags-force()
   (interactive)
-    (my-complete-project-tags t))
+  (my-complete-project-tags t))
 
-;; ============================================================================
-;; SECTION 9: PLATFORM-SPECIFIC SETTINGS
-;; ============================================================================
+(defun my-complete-shell-history ()
+  "Complete from current shell buffer's command history."
+  (interactive)
+  (unless (derived-mode-p 'comint-mode)
+    (error "Not in a comint-mode buffer"))
+  (unless comint-input-ring
+    (error "No command history available"))
+  (let ((history-list (ring-elements comint-input-ring)))
+    (my-completer history-list
+                  (lambda (line)
+                    (comint-send-string (get-buffer-process (current-buffer))
+                                        (concat line "\n"))))))
 
-;; Windows-specific functions
+;; Platform-specific settings
 (when (eq system-type 'windows-nt)
-  ;; Get junction target function
   (defun get-junction-target (junction-dir)
-    "Return the target directory of a Windows junction at JUNCTION-DIR.
-    This function uses the Windows command `fsutil reparsepoint query` to
-    retrieve the reparse point data. If the directory is a valid junction,
-    the returned target will have the leading \"\\??\\\" prefix removed.
-    If not, an error is signaled."
+    "Return the target directory of a Windows junction at JUNCTION-DIR."
     (unless (eq system-type 'windows-nt)
       (error "This function works only on Windows systems"))
     (unless (file-directory-p junction-dir)
@@ -709,13 +687,11 @@
            (output (shell-command-to-string cmd)))
       (if (string-match "Substitute Name:\\s-*\\(.*\\)" output)
           (let ((target (string-trim (match-string 1 output))))
-            ;; Remove the Windows internal prefix if present.
             (if (string-prefix-p "\\??\\" target)
                 (substring target 4)
               target))
         (error "Directory %s is not a junction or its target could not be determined" junction-dir))))
 
-  ;; Windows specific project initialization
   (defun z-init()
     (interactive)
     (setq my-project-root (get-junction-target "h:/dev"))
@@ -724,27 +700,18 @@
     (setq my-complete-find-file-command "rg --files --path-separator / -tpy -tjs -tcss -ttxt ")
     (setq my-diff-command "diff -qr -x .hg -x *.pyc -x __pycache__ -x zebra -x etags -x nvim-undo -x vim-undo -x tags ")
     (setq frame-title-format (string-trim (shell-command-to-string "z_get_proj")))
-    ;; if etags doesn't exist, then make it
     (unless (file-exists-p my-tags) (my-update-tags))
     (visit-tags-table my-tags)
-    (message "the z has been initted for windows...")
-    )
+    (message "the z has been initted for windows..."))
 
-  ;; Windows regression function
   (defun z-open-regression ()
     "Open the regression folder, refresh its contents and sort files by time."
     (interactive)
-    ;; Create a new tab
     (tab-new)
-    ;; Open the regression directory in Dired mode in the new tab
     (dired "\\\\regr3.ztaustin.local\\home\\cg\\regression-output")
-    ;; Refresh Dired buffer
     (revert-buffer)
-    ;; Return should open file in a new window not replace the buffer
-    (define-key dired-mode-map (kbd "RET") 'dired-find-file-other-window)
-    ))
+    (define-key dired-mode-map (kbd "RET") 'dired-find-file-other-window)))
 
-;; macOS specific initialization
 (when (eq system-type 'darwin)
   (defun z-init()
     (interactive)
@@ -755,29 +722,18 @@
                                 " --extension py "
                                 " --extension js "
                                 " --extension css "
-                                my-project-root "/(server|webserver|appserver)"
-                                ) 'find-file "find-file.cache" force-refresh))
-    (message "the z has been initted for macos...")
-    ))
+                                my-project-root "/(server|webserver|appserver)")
+                        'find-file "find-file.cache" force-refresh))
+    (message "the z has been initted for macos...")))
 
-;; ============================================================================
-;; SECTION 10: NYAN MODE AND FUN STUFF
-;; ============================================================================
-
-;; Nyan cat progress bar (only in GUI mode)
+;; Nyan mode
 (require 'nyan-mode)
 (if (display-graphic-p) (progn (nyan-mode 1)))
 
-;; ============================================================================
-;; SECTION 11: DEBUGGER CONFIGURATION
-;; ============================================================================
-
-;; Setup for debugger usage
+;; Debugger setup
 (defun my-debugger-setup()
   (interactive)
-  ;; Prevent Emacs from raising its frame when the server opens a file
   (global-flycheck-mode 0)
-  ;; Turn on line numbers no matter what
   (display-line-numbers-mode 1)
   (setq server-raise-frame nil)
   (server-start)
@@ -785,33 +741,69 @@
   (load-theme 'solarized-gruvbox-light t)
   (global-auto-revert-mode 1)
   (setq global-auto-revert-non-file-buffers t)
-  (global-display-line-numbers-mode 1)
-  )
+  (global-display-line-numbers-mode 1))
 
-;; ============================================================================
-;; SECTION 12: CUSTOM KEYBINDINGS
-;; ============================================================================
+;; Custom selective display increment/decrement functions
+;; These functions manage the selective-display variable with increment/decrement
+;; When it reaches 0, it's set to nil (same as C-x $)
 
-;; Set keybindings with evil-leader
+(defun my-sd-inc ()
+  "Increment selective display level by 1.
+If selective-display is nil, set it to 1.
+If it's already a number, increment by 1."
+  (interactive)
+  (setq selective-display
+        (cond
+         ((null selective-display) 1)
+         ((numberp selective-display) (1+ selective-display))
+         (t 1)))
+  (message "Selective display level: %s" selective-display)
+  ;; Force redisplay
+  (redraw-display))
+
+(defun my-sd-dec ()
+  "Decrement selective display level by 1.
+If selective-display reaches 0 or below, set it to nil (turn off).
+If selective-display is nil, keep it nil."
+  (interactive)
+  (setq selective-display
+        (cond
+         ((null selective-display) nil)
+         ((numberp selective-display)
+          (let ((new-level (1- selective-display)))
+            (if (<= new-level 0)
+                nil
+              new-level)))
+         (t nil)))
+  (message "Selective display level: %s"
+           (if selective-display selective-display "off"))
+  ;; Force redisplay
+  (redraw-display))
+
+(evil-leader/set-key
+  ">" 'my-sd-inc
+  "<" 'my-sd-dec)
+
+;; Keybindings
 (evil-leader/set-key
   ;; File navigation
-  "i" (lambda () (interactive) (find-file "~/.emacs.d/init.el"))  ;; Open init file
-  "o" (lambda () (interactive) (find-file "~/.emacs.d/todo.org")) ;; Open todo.org
-  "e" 'my-complete-find-file-force                                ;; Find files
+  "i" (lambda () (interactive) (find-file "~/.emacs.d/init.el"))
+  "o" (lambda () (interactive) (find-file "~/.emacs.d/todo.org"))
+  "e" 'my-complete-find-file-force
   "E" 'my-complete-buffers
-  "b" 'my-complete-buffer-tags-force                              ;; Complete buffer tags
-  "<tab>" 'tab-close                                              ;; Close current tab
+  "b" 'my-complete-buffer-tags-force
+  "<tab>" 'tab-close
 
   ;; Project management
-  "pp" 'my-project-init                                           ;; Initialize project
-  "v" 'my-project-split-right                                     ;; Split right
-  "r" 'my-project-replace-under-cursor                            ;; Replace under cursor
+  "pp" 'my-project-init
+  "v" 'my-project-split-right
+  "r" 'my-project-replace-under-cursor
 
   ;; Tags and search
-  "t" (lambda () (interactive) (evil-jump-to-tag t))              ;; Jump to tag
-  "T" 'find-tag                                                   ;; Find tag
-  "xt" 'my-update-tags                                            ;; Update tags
-  "g" (lambda () (interactive)                                    ;; Interactive grep search
+  "t" (lambda () (interactive) (evil-jump-to-tag t))
+  "T" 'find-tag
+  "xt" 'my-update-tags
+  "g" (lambda () (interactive)
         (let* ((default-query (or (thing-at-point 'symbol t) ""))
                (default-files (if (buffer-file-name)
                                   (let ((ext (file-name-extension (buffer-file-name))))
@@ -827,11 +819,11 @@
           (rg query files dir)))
 
   ;; Editing and buffer management
-  "xb" 'eval-buffer                                               ;; Evaluate buffer
-  "n" 'display-line-numbers-mode                                  ;; Toggle line numbers
-  "C-a" 'evil-numbers/inc-at-pt                                   ;; Increment number
-  "C-x" 'evil-numbers/dec-at-pt                                   ;; Decrement number
-  "q" 'evil-quit                                                  ;; Quit
+  "xb" 'eval-buffer
+  "n" 'display-line-numbers-mode
+  "C-a" 'evil-numbers/inc-at-pt
+  "C-x" 'evil-numbers/dec-at-pt
+  "q" 'evil-quit
 
   ;; Version control and diff
   "H" (lambda () (interactive)
@@ -842,69 +834,59 @@
           (message "File is not under version control")))
 
   ;; Z-specific functions
-  "zz" 'z-init                                                    ;; Initialize Z project
-  "zc" 'my-code-review                                            ;; Code review mode
-  "zr" 'z-open-regression                                         ;; Open regression test folder
-  "si" 'z-sort-imports                                            ;; Sort Python imports
-  "zi" 'z-get-import                                              ;; Get existing Python import
+  "zz" 'z-init
+  "zc" 'my-code-review
+  "zr" 'z-open-regression
+  "si" 'z-sort-imports
+  "zi" 'z-get-import
   "c" 'copilot-mode
+  "P" 'my-complete-kill-ring
   )
 
-;; Set up keybindings for rg-mode
+;; Additional keybindings
 (require 'rg)
 (define-key rg-mode-map (kbd "]q") 'next-error)
 (define-key rg-mode-map (kbd "[q") 'previous-error)
 
-;; misc keybindings
-;; shift tab should insert an actual tab
 (define-key evil-insert-state-map (kbd "<S-tab>") (lambda () (interactive) (insert "\t")))
 
-;; ============================================================================
-;; SECTION 13: MISCELLANEOUS AND CUSTOMIZATION
-;; ============================================================================
-
-;; Special utility function for cleaning up the kill buffer
+;; Miscellaneous
 (defun z-find-kill (beginning end)
   "Take what is in the clipboard and remove matches from file"
   (interactive "r")
   (defalias 'rpex 'replace-regexp-in-string)
-  (let ( ;; set local vars
-        (my-query
-         (rpex (read-string "SITE (Enter for \"ALVIN\"): " nil nil "ALVIN") ".*"  ;; site
-               (rpex "\\s[0-9]+:[0-9]+:[0-9]\\s" ".*"
-                     (rpex "[0-9]+" ".*"  ;; numbers
+  (let ((my-query
+         (rpex (read-string "SITE (Enter for \"ALVIN\"): " nil nil "ALVIN") ".*"
+               (rpex "\\s-[0-9]+:[0-9]+:[0-9]\\s-" ".*"
+                     (rpex "[0-9]+" ".*"
                            (regexp-quote (buffer-substring beginning end)))))))
-    (query-replace-regexp my-query "")
-    ))
+    (query-replace-regexp my-query "")))
 
 ;; Load shell customizations
 (load "~/.emacs.d/myshell.el")
 
-;; Custom settings - automatically added by Emacs
+;; Custom settings
 (custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
+ '(copilot-chat-frontend 'markdown)
  '(copilot-chat-model "claude-3.7-sonnet")
  '(custom-safe-themes
    '("57a29645c35ae5ce1660d5987d3da5869b048477a7801ce7ab57bfb25ce12d3e"
      "285d1bf306091644fb49993341e0ad8bafe57130d9981b680c1dbd974475c5c7"
      "18a1d83b4e16993189749494d75e6adb0e15452c80c431aca4a867bcc8890ca9"
      "75b371fce3c9e6b1482ba10c883e2fb813f2cc1c88be0b8a1099773eb78a7176" default))
- '(package-selected-packages '(copilot))
+ '(package-selected-packages
+   '(copilot copilot-chat evil-commentary evil-leader evil-numbers evil-surround
+     exec-path-from-shell flycheck gptel-autocomplete gruvbox-theme
+     magit mmm-mode nyan-mode poly-python rg ripgrep solarized-theme
+     vertico))
  '(package-vc-selected-packages
    '((copilot :url "https://github.com/copilot-emacs/copilot.el" :branch "main")))
+ '(python-check-command "zflake8")
  '(python-indent-block-paren-deeper t)
  '(warning-suppress-log-types
    '((copilot copilot-exceeds-max-char) (copilot copilot-exceeds-max-char)))
  '(xref-show-definitions-function 'xref-show-definitions-completing-read))
 
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+(custom-set-faces)
 
 ;;; init.el ends here
