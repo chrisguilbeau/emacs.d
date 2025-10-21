@@ -169,26 +169,26 @@
   (message "Time-based folding enabled. Use C-c @ C-q to hide all, C-c @ C-a to show all, C-c @ C-t to toggle."))
 
 ;; ;; GPtel and Copilot
-;; (gptel-make-gh-copilot "Copilot")
-;; (setq gptel-model 'claude-3.7-sonnet
-;;       gptel-backend (gptel-make-gh-copilot "Copilot"))
+(gptel-make-gh-copilot "Copilot")
+(setq gptel-model 'claude-3.7-sonnet
+      gptel-backend (gptel-make-gh-copilot "Copilot"))
 
-;; (use-package copilot
-;;   :ensure t
-;;   :vc (:url "https://github.com/copilot-emacs/copilot.el"
-;;        :rev :newest
-;;        :branch "main")
-;;   :config
-;;   (add-hook 'prog-mode-hook 'copilot-mode)
-;;   (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
-;;   (define-key copilot-completion-map (kbd "<C-TAB>") 'copilot-next-completion)
-;;   (define-key copilot-completion-map (kbd "<C-S-TAB>") 'copilot-previous-completion)
-;;   (define-key copilot-completion-map (kbd "<C-return>") 'copilot-accept-completion-by-word)
-;;   (define-key copilot-completion-map (kbd "<C-S-return>") 'copilot-accept-completion-by-line)
-;;   (setq copilot-indent-offset-warning-disable t
-;;         copilot-enable-predicates '(evil-insert-state-p)
-;;         copilot-idle-delay 0.2
-;;         copilot-max-char -1))
+(use-package copilot
+  :ensure t
+  :vc (:url "https://github.com/copilot-emacs/copilot.el"
+       :rev :newest
+       :branch "main")
+  :config
+  (add-hook 'prog-mode-hook 'copilot-mode)
+  (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+  (define-key copilot-completion-map (kbd "<C-TAB>") 'copilot-next-completion)
+  (define-key copilot-completion-map (kbd "<C-S-TAB>") 'copilot-previous-completion)
+  (define-key copilot-completion-map (kbd "<C-return>") 'copilot-accept-completion-by-word)
+  (define-key copilot-completion-map (kbd "<C-S-return>") 'copilot-accept-completion-by-line)
+  (setq copilot-indent-offset-warning-disable t
+        copilot-enable-predicates '(evil-insert-state-p)
+        copilot-idle-delay 0.2
+        copilot-max-char -1))
 
 ;; Evil mode
 (require 'evil)
