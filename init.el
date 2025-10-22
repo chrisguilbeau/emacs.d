@@ -82,26 +82,47 @@
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
-(setq package-selected-packages '(evil
-                                  evil-leader
-                                  evil-commentary
-                                  evil-numbers
-                                  evil-surround
-                                  ;; gptel
-                                  gruvbox-theme
-                                  solarized-theme
-                                  nyan-mode
-                                  flycheck
-                                  ripgrep
-                                  vertico
-                                  rg
-                                  copilot-chat
-                                  exec-path-from-shell))
-
 (package-initialize)
-(package-install-selected-packages)
 
-(when (memq window-system '(mac ns x))
+;; Evil mode - Load first for immediate availability
+(use-package evil
+  :ensure t
+  :init
+  (setq evil-undo-system 'undo-redo)
+  :config
+  (evil-mode 1)
+  (evil-define-key 'normal 'global (kbd "] <tab>") 'tab-next)
+  (evil-define-key 'normal 'global (kbd "[ <tab>") 'tab-previous)
+  (evil-define-key 'normal 'global (kbd "]q") 'next-error)
+  (evil-define-key 'normal 'global (kbd "[q") 'previous-error)
+  (evil-define-key 'insert 'global (kbd "C-S-n") 'copilot-complete))
+
+(use-package evil-leader
+  :ensure t
+  :after evil
+  :config
+  (global-evil-leader-mode))
+
+(use-package evil-surround
+  :ensure t
+  :after evil
+  :config
+  (global-evil-surround-mode 1))
+
+(use-package evil-commentary
+  :ensure t
+  :after evil
+  :config
+  (evil-commentary-mode))
+
+(use-package evil-numbers
+  :ensure t
+  :after evil)
+
+(use-package exec-path-from-shell
+  :ensure t
+  :if (memq window-system '(mac ns x))
+  :config
   (exec-path-from-shell-initialize))
 
 ;; Polymode setup
@@ -109,7 +130,7 @@
   :ensure t
   :config
   (define-hostmode poly-python-hostmode
-    :mode 'python-ts-mode)
+    :mode 'python-mode)
 
   (define-innermode poly-python-sql-innermode
     :mode 'sql-mode
@@ -139,7 +160,7 @@
   "Toggle polymode for Python SQL strings."
   (interactive)
   (if (eq major-mode 'poly-python-sql-mode)
-      (python-ts-mode)
+      (python-mode)
     (poly-python-sql-mode)))
 
 ;; Org-mode fix for evil
@@ -168,12 +189,9 @@
   (setq-local outline-regexp "^[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}")
   (message "Time-based folding enabled. Use C-c @ C-q to hide all, C-c @ C-a to show all, C-c @ C-t to toggle."))
 
-;; ;; GPtel and Copilot
-(gptel-make-gh-copilot "Copilot")
-(setq gptel-model 'claude-3.7-sonnet
-      gptel-backend (gptel-make-gh-copilot "Copilot"))
 
 (use-package copilot
+  :disabled t
   :ensure t
   :vc (:url "https://github.com/copilot-emacs/copilot.el"
        :rev :newest
@@ -190,53 +208,10 @@
         copilot-idle-delay 0.2
         copilot-max-char -1))
 
-;; Evil mode
-(require 'evil)
-(evil-mode 1)
-(evil-set-undo-system 'undo-redo)
-
-(require 'evil-surround)
-(global-evil-surround-mode 1)
-
-(require 'evil-leader)
-(global-evil-leader-mode)
-
-(require 'evil-commentary)
-(evil-commentary-mode)
-
-(evil-define-key 'normal 'global (kbd "] <tab>") 'tab-next)
-(evil-define-key 'normal 'global (kbd "[ <tab>") 'tab-previous)
-(evil-define-key 'normal 'global (kbd "]q") 'next-error)
-(evil-define-key 'normal 'global (kbd "[q") 'previous-error)
-(evil-define-key 'insert 'global (kbd "C-S-n") 'copilot-complete)
+(use-package copilot-chat
+  :ensure t)
 
 ;; Flycheck
-(require 'flycheck)
-(setq flycheck-checker-error-threshold nil)
-(setq flycheck-highlighting-mode 'lines)
-(setq flycheck-locate-config-file-functions '(flycheck-locate-config-file-ancestor-directories))
-(setq flycheck-check-syntax-automatically '(save mode-enabled))
-
-(when (eq system-type 'windows-nt)
-  (setq-default flycheck-python-flake8-executable "h:/src/python/python.exe")
-  (setq-default flycheck-jshintrc "C:/ZogoTech/hg/cg.dotfiles/jshint.config"))
-
-(add-hook 'js-mode-hook #'flycheck-mode)
-(add-hook 'python-mode-hook #'flycheck-mode)
-(add-hook 'python-ts-mode-hook #'flycheck-mode)
-
-(with-eval-after-load 'flycheck
-  (setq-default flycheck-disabled-checkers '(python-pyright python-pylint python-mypy python-pycompile)))
-
-(add-to-list 'display-buffer-alist
-             `(,(rx bos "*Flycheck errors*" eos)
-               (display-buffer-reuse-window
-                display-buffer-in-side-window)
-               (side            . bottom)
-               (reusable-frames . visible)
-               (window-height   . 0.33)))
-
-;; Flycheck background colors
 (defvar-local my-flycheck-background-cookie nil
   "Cookie for Flycheck background face remapping.")
 
@@ -255,18 +230,42 @@
       (setq my-flycheck-background-cookie
             (face-remap-add-relative 'default :background bg)))))
 
-(add-hook 'flycheck-after-syntax-check-hook #'my-flycheck-change-background)
-(add-hook 'flycheck-mode-hook
-          (lambda () (unless flycheck-mode (my-flycheck-change-background))))
-
-(evil-define-key 'normal 'global (kbd "]a") 'flycheck-next-error)
-(evil-define-key 'normal 'global (kbd "[a") 'flycheck-previous-error)
+(use-package flycheck
+  :ensure t
+  :init
+  (setq flycheck-checker-error-threshold nil)
+  (setq flycheck-highlighting-mode 'lines)
+  (setq flycheck-locate-config-file-functions '(flycheck-locate-config-file-ancestor-directories))
+  (setq flycheck-check-syntax-automatically '(save mode-enabled))
+  (when (eq system-type 'windows-nt)
+    (setq-default flycheck-python-flake8-executable "h:/src/python/python.exe")
+    (setq-default flycheck-jshintrc "C:/ZogoTech/hg/cg.dotfiles/jshint.config"))
+  :config
+  (setq-default flycheck-disabled-checkers '(python-pyright python-pylint python-mypy python-pycompile))
+  (add-to-list 'display-buffer-alist
+               `(,(rx bos "*Flycheck errors*" eos)
+                 (display-buffer-reuse-window
+                  display-buffer-in-side-window)
+                 (side            . bottom)
+                 (reusable-frames . visible)
+                 (window-height   . 0.33)))
+  (add-hook 'flycheck-after-syntax-check-hook #'my-flycheck-change-background)
+  (add-hook 'flycheck-mode-hook
+            (lambda () (unless flycheck-mode (my-flycheck-change-background))))
+  (evil-define-key 'normal 'global (kbd "]a") 'flycheck-next-error)
+  (evil-define-key 'normal 'global (kbd "[a") 'flycheck-previous-error)
+  :hook
+  ((js-mode . flycheck-mode)
+   (python-mode . flycheck-mode)))
 
 ;; Vertico completion
-(require 'vertico)
-(setq completion-styles '(basic substring partial-completion flex))
-(setq completion-ignore-case t)
-(vertico-mode 1)
+(use-package vertico
+  :ensure t
+  :init
+  (setq completion-styles '(basic substring partial-completion flex))
+  (setq completion-ignore-case t)
+  :config
+  (vertico-mode 1))
 
 ;; Ediff
 (setq ediff-split-window-function 'split-window-horizontally)
@@ -279,13 +278,7 @@
 (add-hook 'ediff-quit-hook #'my-ediff-restore-windows)
 
 ;; Python configuration
-(setq my-python-hook (if (treesit-available-p) 'python-ts-mode-hook 'python-mode-hook))
-
-(unless (treesit-language-available-p 'python)
-  (treesit-install-language-grammar 'python))
-
-(setq major-mode-remap-alist
-      '((python-mode . python-ts-mode)))
+(setq my-python-hook 'python-mode-hook)
 
 (defun rm-advice-python-indent-line-function ()
   "Add one indentation level when line begins with closing parenthesis."
@@ -727,8 +720,11 @@
     (message "the z has been initted for macos...")))
 
 ;; Nyan mode
-(require 'nyan-mode)
-(if (display-graphic-p) (progn (nyan-mode 1)))
+(use-package nyan-mode
+  :ensure t
+  :if (display-graphic-p)
+  :config
+  (nyan-mode 1))
 
 ;; Debugger setup
 (defun my-debugger-setup()
@@ -843,10 +839,12 @@ If selective-display is nil, keep it nil."
   "P" 'my-complete-kill-ring
   )
 
-;; Additional keybindings
-(require 'rg)
-(define-key rg-mode-map (kbd "]q") 'next-error)
-(define-key rg-mode-map (kbd "[q") 'previous-error)
+;; Ripgrep
+(use-package rg
+  :ensure t
+  :config
+  (define-key rg-mode-map (kbd "]q") 'next-error)
+  (define-key rg-mode-map (kbd "[q") 'previous-error))
 
 (define-key evil-insert-state-map (kbd "<S-tab>") (lambda () (interactive) (insert "\t")))
 
@@ -867,26 +865,18 @@ If selective-display is nil, keep it nil."
 
 ;; Custom settings
 (custom-set-variables
- '(copilot-chat-frontend 'markdown)
- '(copilot-chat-model "claude-3.7-sonnet")
- '(custom-safe-themes
-   '("57a29645c35ae5ce1660d5987d3da5869b048477a7801ce7ab57bfb25ce12d3e"
-     "285d1bf306091644fb49993341e0ad8bafe57130d9981b680c1dbd974475c5c7"
-     "18a1d83b4e16993189749494d75e6adb0e15452c80c431aca4a867bcc8890ca9"
-     "75b371fce3c9e6b1482ba10c883e2fb813f2cc1c88be0b8a1099773eb78a7176" default))
- '(package-selected-packages
-   '(copilot copilot-chat evil-commentary evil-leader evil-numbers evil-surround
-     exec-path-from-shell flycheck gptel-autocomplete gruvbox-theme
-     magit mmm-mode nyan-mode poly-python rg ripgrep solarized-theme
-     vertico))
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
  '(package-vc-selected-packages
-   '((copilot :url "https://github.com/copilot-emacs/copilot.el" :branch "main")))
- '(python-check-command "zflake8")
- '(python-indent-block-paren-deeper t)
- '(warning-suppress-log-types
-   '((copilot copilot-exceeds-max-char) (copilot copilot-exceeds-max-char)))
- '(xref-show-definitions-function 'xref-show-definitions-completing-read))
+   '((copilot :url "https://github.com/copilot-emacs/copilot.el" :branch "main"))))
 
-(custom-set-faces)
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
 
 ;;; init.el ends here

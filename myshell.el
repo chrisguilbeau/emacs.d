@@ -34,10 +34,6 @@
 		      (lambda ()
 			(display-line-numbers-mode 1)
 			(hl-line-mode 1)))
-	    (add-hook 'python-ts-mode-hook
-		      (lambda ()
-			(display-line-numbers-mode 1)
-			(hl-line-mode 1)))
 	    (define-key shell-mode-map [down-mouse-1] 'switch-to-evil-state-on-click)))
 
 ;; (defun switch-to-evil-normal-state-on-click (event)
